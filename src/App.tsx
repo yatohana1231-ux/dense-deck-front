@@ -88,6 +88,10 @@ function App() {
   const [streetCooldown, setStreetCooldown] = useState(false);
   const prevStreet = useRef<Street | null>(null);
   const lastRecordedHandId = useRef<string | null>(null);
+  const [lastFinishedRecord, setLastFinishedRecord] = useState<HandRecord | null>(null);
+  const [postedHandId, setPostedHandId] = useState<string | null>(null);
+  const [postStatus, setPostStatus] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
   const shouldLoadHistory = view === "history";
   const { history, refresh: refreshHistory } = useHandHistory(
     shouldLoadHistory,
@@ -116,6 +120,9 @@ function App() {
     createInitialTable(PLAYER_COUNT, INITIAL_STACK, initialBtn, rngRef.current).then((next) => {
       prevStreet.current = next.street;
       setTable(next);
+      setLastFinishedRecord(null);
+      setPostedHandId(null);
+      setPostStatus(null);
       setPopup(null);
       setIsAnimating(false);
       setStreetCooldown(false);
@@ -137,6 +144,9 @@ function App() {
     ).then((next) => {
       prevStreet.current = next.street;
       setTable(next);
+      setLastFinishedRecord(null);
+      setPostedHandId(null);
+      setPostStatus(null);
       setPopup(null);
       setIsAnimating(false);
       setStreetCooldown(false);
@@ -296,6 +306,8 @@ function App() {
     if (lastRecordedHandId.current === table.handId) return;
     const record = buildHandRecord(table, HERO_INDEX);
     saveHandRecord(record);
+    setLastFinishedRecord(record);
+    setPostedHandId(null);
     lastRecordedHandId.current = table.handId;
   }, [table]);
 
@@ -304,6 +316,61 @@ function App() {
       clearPendingTimers();
     };
   }, []);
+
+  const handlePostLastHand = async () => {
+    if (!lastFinishedRecord) return;
+    setPosting(true);
+    setPostStatus(null);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE ?? "";
+      const heroInitial = lastFinishedRecord.initialStacks[HERO_INDEX] ?? 0;
+      const heroFinal = lastFinishedRecord.finalStacks[HERO_INDEX] ?? 0;
+      const payload = {
+        board: lastFinishedRecord.board,
+        boardReserved:
+          lastFinishedRecord.boardReserved ?? table?.boardReserved ?? [],
+        holeCards: lastFinishedRecord.holeCards,
+        initialStacks: lastFinishedRecord.initialStacks,
+        finalStacks: lastFinishedRecord.finalStacks,
+        actionLog: lastFinishedRecord.actionLog,
+        winners: lastFinishedRecord.winners,
+        handValues: lastFinishedRecord.handValues,
+        seatCount: lastFinishedRecord.seatCount ?? lastFinishedRecord.holeCards.length,
+        btnIndex: lastFinishedRecord.btnIndex,
+        heroIndex: lastFinishedRecord.heroIndex,
+        streetEnded: lastFinishedRecord.streetEnded,
+        mode: "superDense",
+      };
+      const body = {
+        handId: lastFinishedRecord.handId,
+        tableId: "table-local",
+        playerId: "player-local",
+        mode: "superDense",
+        stakes: { sb: 0, bb: 1 },
+        heroSeat: HERO_INDEX,
+        heroNetResult: heroFinal - heroInitial,
+        winnerCount: lastFinishedRecord.winners.length,
+        autoWin: lastFinishedRecord.autoWin ?? false,
+        playedAt: new Date(lastFinishedRecord.startedAt).toISOString(),
+        payload,
+      };
+      const res = await fetch(`${apiBase}/api/history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      setPostedHandId(lastFinishedRecord.handId);
+      setPostStatus("Saved hand to DB");
+    } catch (e: any) {
+      setPostStatus(`Save failed: ${e?.message ?? e}`);
+    } finally {
+      setPosting(false);
+    }
+  };
 
   const showdownText =
     table && table.street === "showdown" && showdown
@@ -348,6 +415,33 @@ function App() {
             className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
           >
             Back to TOP
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <div className="text-sm text-slate-300 min-h-[20px]">
+            {postStatus ?? "\u00a0"}
+          </div>
+          <button
+            onClick={handlePostLastHand}
+            disabled={
+              posting ||
+              !lastFinishedRecord ||
+              postedHandId === lastFinishedRecord?.handId
+            }
+            className={`px-3 py-1.5 rounded text-sm font-semibold ${
+              posting ||
+              !lastFinishedRecord ||
+              postedHandId === lastFinishedRecord?.handId
+                ? "bg-slate-700 text-slate-400"
+                : "bg-emerald-600 hover:bg-emerald-500 text-white"
+            }`}
+          >
+            {posting
+              ? "Saving..."
+              : postedHandId === lastFinishedRecord?.handId
+                ? "Saved"
+                : "Save Hand to DB"}
           </button>
         </div>
 

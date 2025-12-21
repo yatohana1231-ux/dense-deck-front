@@ -16,6 +16,8 @@ export type HandRecord = {
     turn: CardType;
     river: CardType;
   };
+  boardReserved?: CardType[];
+  seatCount?: number;
   holeCards: CardType[][];
   initialStacks: number[];
   finalStacks: number[];
@@ -78,6 +80,8 @@ export function buildHandRecord(table: TableState, heroIndex = 2): HandRecord {
       turn: table.game.turn,
       river: table.game.river,
     },
+    boardReserved: table.boardReserved,
+    seatCount: table.game.players.length,
     holeCards: table.game.players.map((p) => p.hand),
     initialStacks: table.initialStacks,
     finalStacks: table.game.players.map((p) => p.stack),

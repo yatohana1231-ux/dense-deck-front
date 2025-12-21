@@ -128,6 +128,7 @@ export async function createInitialTable(
 
   return {
     game,
+    boardReserved,
     street: "preflop",
     currentPlayer: firstActor,
     roundStarter: firstActor,

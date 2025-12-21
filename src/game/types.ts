@@ -35,6 +35,7 @@ export type ActionLogEntry = {
 
 export type TableState = {
   game: GameState;
+  boardReserved: CardType[];
   street: Street;
   currentPlayer: number;
   roundStarter: number;
