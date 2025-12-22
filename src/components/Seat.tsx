@@ -13,6 +13,7 @@ type SeatProps = {
   showCards: boolean;
   isButton?: boolean;
   popupText?: string;
+  isActive?: boolean;
 };
 
 export default function Seat({
@@ -25,9 +26,14 @@ export default function Seat({
   showCards,
   isButton,
   popupText,
+  isActive = true,
 }: SeatProps) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div
+      className={`flex flex-col items-center gap-1 transition ${
+        isActive ? "" : "opacity-40 grayscale"
+      }`}
+    >
       {/* アクションポップアップ：高さを固定してレイアウト崩れを防ぐ */}
       <div className="h-6 flex items-center">
         {popupText ? (

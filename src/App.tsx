@@ -29,8 +29,8 @@ import {
   type HandRecord,
 } from "./game/history/recorder";
 import { createRng } from "./game/rng";
-import { useReplay } from "./hooks/useReplay";
 import { useHandHistory } from "./hooks/useHandHistory";
+import ReplayView from "./views/ReplayView";
 
 const HERO_INDEX = 2 as const;
 const PLAYER_COUNT = 4;
@@ -79,7 +79,7 @@ function getHandDescription(v?: HandValue | null): string | undefined {
 }
 
 function App() {
-  type ViewMode = "top" | "game" | "history";
+  type ViewMode = "top" | "game" | "history" | "replay";
   const [view, setView] = useState<ViewMode>("top");
   const [table, setTable] = useState<TableState | null>(null);
   const [devShowAll, setDevShowAll] = useState(false);
@@ -98,10 +98,9 @@ function App() {
     5
   );
   const rngRef = useRef(createRng());
-  const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
-  const { replayIndex, isReplaying, togglePlay, reset } = useReplay(replayRecord);
   const animTimeoutRef = useRef<number | null>(null);
   const advanceTimeoutRef = useRef<number | null>(null);
+  const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
 
   const clearPendingTimers = () => {
     if (animTimeoutRef.current !== null) {
@@ -161,6 +160,7 @@ function App() {
 
   const startReplay = (record: HandRecord) => {
     setReplayRecord(record);
+    setView("replay");
   };
 
   const fullBoard = useMemo<CardType[]>(() => {
@@ -379,6 +379,14 @@ function App() {
           .join(", ")}`
       : undefined;
 
+  const isSeatActive = (idx: number) => {
+    if (!table) return false;
+    if (table.street === "showdown") {
+      return !!showdown?.winners.includes(idx);
+    }
+    return table.currentPlayer === idx;
+  };
+
   // TOP screen
   if (view === "top") {
     return <TopView onStart={startGame} onViewHands={handleViewHands} />;
@@ -389,15 +397,14 @@ function App() {
     return (
       <HistoryView
         history={history}
-        replayRecord={replayRecord}
-        replayIndex={replayIndex}
-        isReplaying={isReplaying}
         onSelectHand={startReplay}
-        onTogglePlay={togglePlay}
-        onReset={reset}
         onBack={() => setView("top")}
       />
     );
+  }
+
+  if (view === "replay" && replayRecord) {
+    return <ReplayView record={replayRecord} onBack={() => setView("history")} />;
   }
 
   if (!table) return null;
@@ -461,17 +468,18 @@ function App() {
               hand={table.game.players[0].hand}
               player={table.game.players[0]}
               isWinner={!!showdown?.winners.includes(0)}
-              handDescription={
-                showdown ? getHandDescription(showdown.values[0]) : undefined
-              }
-              showCards={
-                devShowAll ||
-                (table.street === "showdown" && !table.game.players[0].folded)
-              }
-              isButton={table.btnIndex === 0}
-              popupText={popup?.playerIndex === 0 ? popup.text : undefined}
-            />
-          </div>
+            handDescription={
+              showdown ? getHandDescription(showdown.values[0]) : undefined
+            }
+            showCards={
+              devShowAll ||
+              (table.street === "showdown" && !table.game.players[0].folded)
+            }
+            isButton={table.btnIndex === 0}
+            popupText={popup?.playerIndex === 0 ? popup.text : undefined}
+            isActive={isSeatActive(0)}
+          />
+        </div>
 
           <div className="row-start-2 col-start-1 col-span-3 flex items-center justify-center">
             <BoardArea cards={visibleBoard} pot={table.game.pot} />
@@ -479,58 +487,61 @@ function App() {
 
           <div className="row-start-2 col-start-1 flex items-start justify-center mt-1">
             <Seat
-              label={positionLabel(3, table.btnIndex)}
-              hand={table.game.players[3].hand}
-              player={table.game.players[3]}
-              isWinner={!!showdown?.winners.includes(3)}
-              handDescription={
-                showdown ? getHandDescription(showdown.values[3]) : undefined
-              }
-              showCards={
-                devShowAll ||
-                (table.street === "showdown" && !table.game.players[3].folded)
-              }
-              isButton={table.btnIndex === 3}
-              popupText={popup?.playerIndex === 3 ? popup.text : undefined}
-            />
-          </div>
+            label={positionLabel(3, table.btnIndex)}
+            hand={table.game.players[3].hand}
+            player={table.game.players[3]}
+            isWinner={!!showdown?.winners.includes(3)}
+            handDescription={
+              showdown ? getHandDescription(showdown.values[3]) : undefined
+            }
+            showCards={
+              devShowAll ||
+              (table.street === "showdown" && !table.game.players[3].folded)
+            }
+            isButton={table.btnIndex === 3}
+            popupText={popup?.playerIndex === 3 ? popup.text : undefined}
+            isActive={isSeatActive(3)}
+          />
+        </div>
 
           <div className="row-start-2 col-start-3 flex items-start justify-center mt-1">
             <Seat
-              label={positionLabel(1, table.btnIndex)}
-              hand={table.game.players[1].hand}
-              player={table.game.players[1]}
-              isWinner={!!showdown?.winners.includes(1)}
-              handDescription={
-                showdown ? getHandDescription(showdown.values[1]) : undefined
-              }
-              showCards={
-                devShowAll ||
-                (table.street === "showdown" && !table.game.players[1].folded)
-              }
-              isButton={table.btnIndex === 1}
-              popupText={popup?.playerIndex === 1 ? popup.text : undefined}
-            />
-          </div>
+            label={positionLabel(1, table.btnIndex)}
+            hand={table.game.players[1].hand}
+            player={table.game.players[1]}
+            isWinner={!!showdown?.winners.includes(1)}
+            handDescription={
+              showdown ? getHandDescription(showdown.values[1]) : undefined
+            }
+            showCards={
+              devShowAll ||
+              (table.street === "showdown" && !table.game.players[1].folded)
+            }
+            isButton={table.btnIndex === 1}
+            popupText={popup?.playerIndex === 1 ? popup.text : undefined}
+            isActive={isSeatActive(1)}
+          />
+        </div>
 
           <div className="row-start-3 col-start-2 flex flex-col items-center justify-center gap-3">
             <Seat
               label={`You (${positionLabel(HERO_INDEX, table.btnIndex)})`}
               hand={table.game.players[HERO_INDEX].hand}
               player={table.game.players[HERO_INDEX]}
-              isHero
-              isWinner={!!showdown?.winners.includes(HERO_INDEX)}
-              handDescription={
-                showdown
-                  ? getHandDescription(showdown.values?.[HERO_INDEX])
-                  : undefined
-              }
-              showCards
-              isButton={table.btnIndex === HERO_INDEX}
-              popupText={
-                popup?.playerIndex === HERO_INDEX ? popup.text : undefined
-              }
-            />
+            isHero
+            isWinner={!!showdown?.winners.includes(HERO_INDEX)}
+            handDescription={
+              showdown
+                ? getHandDescription(showdown.values?.[HERO_INDEX])
+                : undefined
+            }
+            showCards
+            isButton={table.btnIndex === HERO_INDEX}
+            popupText={
+              popup?.playerIndex === HERO_INDEX ? popup.text : undefined
+            }
+            isActive={isSeatActive(HERO_INDEX)}
+          />
 
             <HeroActions
               isHeroTurn={isHeroTurn}

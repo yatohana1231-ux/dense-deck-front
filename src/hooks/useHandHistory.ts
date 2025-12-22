@@ -1,29 +1,43 @@
 import { useEffect, useState } from "react";
 import type { HandRecord } from "../game/history/recorder";
 
-const STORAGE_KEY = "dense-deck-hand-history";
+const mergePayload = (item: any): HandRecord => {
+  if (item.payload && typeof item.payload === "object") {
+    const p = item.payload as any;
+    return {
+      ...item,
+      board: p.board ?? item.board,
+      boardReserved: p.boardReserved ?? item.boardReserved,
+      holeCards: p.holeCards ?? item.holeCards,
+      initialStacks: p.initialStacks ?? item.initialStacks,
+      finalStacks: p.finalStacks ?? item.finalStacks,
+      actionLog: p.actionLog ?? item.actionLog ?? [],
+      winners: p.winners ?? item.winners ?? [],
+      handValues: p.handValues ?? item.handValues ?? [],
+      seatCount: p.seatCount ?? item.seatCount,
+      heroIndex: p.heroIndex ?? item.heroIndex,
+      btnIndex: p.btnIndex ?? item.btnIndex,
+      streetEnded: p.streetEnded ?? item.streetEnded,
+    };
+  }
+  return item as HandRecord;
+};
 
 export function useHandHistory(shouldLoad: boolean, limit = 5) {
   const [history, setHistory] = useState<HandRecord[]>([]);
 
-  const refresh = () => {
-    if (typeof window === "undefined") {
-      setHistory([]);
-      return;
-    }
+  const refresh = async () => {
+    const apiBase = import.meta.env.VITE_API_BASE ?? "";
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        setHistory([]);
-        return;
+      const res = await fetch(`${apiBase}/api/history?limit=${limit}`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
-      const parsed: HandRecord[] = JSON.parse(raw);
-      const sorted = [...parsed].sort(
-        (a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0)
-      );
-      setHistory(sorted.slice(0, limit));
+      const data = (await res.json()) as any[];
+      const mapped = data.map(mergePayload);
+      setHistory(mapped);
     } catch (e) {
-      console.warn("Failed to load hand history", e);
+      console.warn("Failed to load hand history from API", e);
       setHistory([]);
     }
   };
@@ -33,7 +47,7 @@ export function useHandHistory(shouldLoad: boolean, limit = 5) {
       refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldLoad]);
+  }, [shouldLoad, limit]);
 
   return { history, refresh };
 }
