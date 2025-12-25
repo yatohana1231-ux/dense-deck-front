@@ -30,6 +30,7 @@ import {
 } from "./game/history/recorder";
 import { createRng } from "./game/rng";
 import { useHandHistory } from "./hooks/useHandHistory";
+import { useAuth } from "./hooks/useAuth";
 import ReplayView from "./views/ReplayView";
 
 const HERO_INDEX = 2 as const;
@@ -101,6 +102,7 @@ function App() {
   const animTimeoutRef = useRef<number | null>(null);
   const advanceTimeoutRef = useRef<number | null>(null);
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
+  const { user, ready: authReady } = useAuth();
 
   const clearPendingTimers = () => {
     if (animTimeoutRef.current !== null) {
@@ -114,6 +116,7 @@ function App() {
   };
 
   const startGame = () => {
+    if (!authReady) return;
     clearPendingTimers();
     const initialBtn = Math.floor(rngRef.current.random() * PLAYER_COUNT);
     createInitialTable(PLAYER_COUNT, INITIAL_STACK, initialBtn, rngRef.current).then((next) => {
@@ -130,6 +133,7 @@ function App() {
   };
 
   const handleNewHand = () => {
+    if (!authReady) return;
     clearPendingTimers();
     const nextBtn =
       table !== null
@@ -357,6 +361,7 @@ function App() {
       const res = await fetch(`${apiBase}/api/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -388,6 +393,14 @@ function App() {
   };
 
   // TOP screen
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex items-center justify-center">
+        <div className="text-sm text-slate-300">Loading...</div>
+      </div>
+    );
+  }
+
   if (view === "top") {
     return <TopView onStart={startGame} onViewHands={handleViewHands} />;
   }

@@ -29,7 +29,9 @@ export function useHandHistory(shouldLoad: boolean, limit = 5) {
   const refresh = async () => {
     const apiBase = import.meta.env.VITE_API_BASE ?? "";
     try {
-      const res = await fetch(`${apiBase}/api/history?limit=${limit}`);
+      const res = await fetch(`${apiBase}/api/history?limit=${limit}`, {
+        credentials: "include",
+      });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
