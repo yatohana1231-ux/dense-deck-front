@@ -40,6 +40,8 @@ function buildInitialTable(record: HandRecord): TableState {
     currentPlayer: record.actionLog?.[0]?.playerIndex ?? 0,
     roundStarter: record.actionLog?.[0]?.playerIndex ?? 0,
     lastAggressor: null,
+    lastRaise: 1,
+    revealStreet: "preflop",
     btnIndex: record.btnIndex ?? 0,
     autoWin: record.autoWin ?? null,
     handId: record.handId,
@@ -61,6 +63,8 @@ function applyLogEntry(table: TableState, entry: ActionLogEntry): TableState {
   p.stack = entry.stackAfter;
   if (p.stack === 0) p.allIn = true;
 
+  const revealStreet = entry.street;
+
   return {
     ...table,
     game: {
@@ -70,6 +74,7 @@ function applyLogEntry(table: TableState, entry: ActionLogEntry): TableState {
       currentBet: entry.currentBetAfter,
     },
     street,
+    revealStreet,
     currentPlayer: entry.playerIndex,
     actionLog: [...table.actionLog, entry],
   };

@@ -40,8 +40,10 @@ export type TableState = {
   currentPlayer: number;
   roundStarter: number;
   lastAggressor: number | null;
+  lastRaise: number;
   btnIndex: number;
   autoWin: number | null;
+  revealStreet: Street;
   handId: string;
   handStartedAt: number;
   initialStacks: number[];
@@ -51,6 +53,7 @@ export type TableState = {
 export type PendingAction = {
   playerIndex: number;
   kind: ActionKind;
+  amount?: number;
 };
 
 export type Position = "BTN" | "BB" | "UTG" | "CO";

@@ -193,18 +193,15 @@ function App() {
     return [...flop, turn, river];
   }, [table]);
 
-  const visibleBoard = useMemo<CardType[]>(() => {
-    if (!table) return [];
-    const { street, autoWin } = table;
-    const { flop, turn } = table.game;
-    if (street === "showdown" && autoWin !== null) {
+const visibleBoard = useMemo<CardType[]>(() => {
+  if (!table) return [];
+  const street = table.revealStreet ?? table.street;
+  const { flop, turn } = table.game;
+  switch (street) {
+    case "preflop":
       return [];
-    }
-    switch (street) {
-      case "preflop":
-        return [];
-      case "flop":
-        return flop;
+    case "flop":
+      return flop;
       case "turn":
         return [...flop, turn];
       case "river":
@@ -272,6 +269,26 @@ function App() {
     table && hero ? Math.max(0, table.game.currentBet - hero.bet) : 0;
   const heroCanCheck = heroToCall === 0;
   const heroCanBetOrRaise = !!hero && hero.stack > 0;
+  const minBet = useMemo(() => {
+    if (!table || !hero) return 1;
+    if (table.game.currentBet === 0) return 1;
+    const lastRaise = table.lastRaise ?? 1;
+    return Math.max(table.game.currentBet + lastRaise, table.game.currentBet + 1);
+  }, [table, hero]);
+  const maxBet = useMemo(() => {
+    if (!hero) return 0;
+    return hero.bet + hero.stack;
+  }, [hero]);
+  const [heroBetAmount, setHeroBetAmount] = useState<number>(1);
+
+  useEffect(() => {
+    if (!table || !hero) return;
+    const defaultAmount =
+      table.game.currentBet === 0
+        ? Math.max(1, hero.bet + heroToCall)
+        : Math.max(minBet, hero.bet + heroToCall);
+    setHeroBetAmount(Math.min(defaultAmount, hero.bet + hero.stack));
+  }, [table?.street, table?.game.currentBet, hero, heroToCall, minBet]);
 
   const runActionWithAnimation = (action: PendingAction) => {
     if (!table) return;
@@ -691,6 +708,13 @@ function App() {
               heroCanBetOrRaise={heroCanBetOrRaise}
               currentBet={table.game.currentBet}
               toCall={heroToCall}
+              minBet={minBet}
+              maxBet={maxBet}
+              amount={heroBetAmount}
+              onAmountChange={(v) => {
+                const clamped = Math.min(Math.max(v, minBet), maxBet || minBet);
+                setHeroBetAmount(clamped);
+              }}
               onFold={() =>
                 runActionWithAnimation({
                   playerIndex: HERO_INDEX,
@@ -710,6 +734,7 @@ function App() {
                     table.game.currentBet === 0
                       ? "bet"
                       : ("raise" as ActionKind),
+                  amount: heroBetAmount,
                 })
               }
             />

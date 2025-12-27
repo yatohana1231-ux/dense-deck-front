@@ -56,30 +56,6 @@ function findNextActiveInOrder(
   return current;
 }
 
-function computeBetOrRaiseAmount(
-  game: GameState,
-  street: Street,
-  player: PlayerState
-): { pay: number; newCurrentBet: number } {
-  const { pot, currentBet } = game;
-
-  if (currentBet === 0) {
-    const open = street === "preflop" ? 3 : Math.ceil(Math.max(pot, 1) / 2);
-    const pay = Math.min(open, player.stack);
-    const newBet = player.bet + pay;
-    return { pay, newCurrentBet: newBet };
-  }
-
-  const toCall = currentBet - player.bet;
-  const call = Math.min(toCall, player.stack);
-  const remaining = player.stack - call;
-  const raisePart = remaining > 0 ? Math.min(toCall * 3, remaining) : 0;
-  const pay = Math.min(call + raisePart, player.stack);
-  const newBet = player.bet + pay;
-  const newCurrentBet = Math.max(currentBet, newBet);
-  return { pay, newCurrentBet };
-}
-
 export async function createInitialTable(
   playerCount: number,
   initialStack: number,
@@ -133,8 +109,10 @@ export async function createInitialTable(
     currentPlayer: firstActor,
     roundStarter: firstActor,
     lastAggressor: null,
+    lastRaise: 1, // BB posted 1BB
     btnIndex,
     autoWin: null,
+    revealStreet: "preflop",
     handId,
     handStartedAt: Date.now(),
     initialStacks: Array(playerCount).fill(initialStack),
@@ -157,6 +135,7 @@ export function applyAction(
   let pot = game.pot;
   let currentBet = game.currentBet;
   let lastAggressor = gameState.lastAggressor;
+  let lastRaise = gameState.lastRaise ?? 1;
   let payAmount = 0;
 
   switch (kind) {
@@ -182,18 +161,43 @@ export function applyAction(
     }
     case "bet":
     case "raise": {
-      const { pay, newCurrentBet } = computeBetOrRaiseAmount(
-        game,
-        street,
-        p
-      );
-      payAmount = pay;
-      p.stack -= pay;
-      p.bet += pay;
-      pot += pay;
-      currentBet = newCurrentBet;
-      if (p.stack === 0) p.allIn = true;
-      lastAggressor = playerIndex;
+      const maxTotal = p.bet + p.stack;
+      const desiredTotal =
+        action.amount !== undefined ? Math.max(0, action.amount) : p.bet;
+
+      if (currentBet === 0) {
+        const minBet = 1;
+        const targetTotal = Math.min(Math.max(desiredTotal, minBet), maxTotal);
+        const pay = Math.max(0, targetTotal - p.bet);
+        payAmount = pay;
+        p.stack -= pay;
+        p.bet += pay;
+        pot += pay;
+        currentBet = p.bet;
+        lastRaise = currentBet;
+        if (p.stack === 0) p.allIn = true;
+        lastAggressor = playerIndex;
+      } else {
+        const minRaiseTotal = Math.max(currentBet + lastRaise, currentBet + 1);
+        const targetTotal = Math.min(
+          Math.max(desiredTotal, minRaiseTotal),
+          maxTotal
+        );
+        const pay = Math.max(0, targetTotal - p.bet);
+        payAmount = pay;
+        p.stack -= pay;
+        p.bet += pay;
+        pot += pay;
+        const raiseSize = p.bet - currentBet;
+        if (raiseSize >= lastRaise) {
+          lastRaise = raiseSize;
+          currentBet = p.bet;
+          lastAggressor = playerIndex;
+        } else {
+          currentBet = Math.max(currentBet, p.bet);
+        }
+        if (p.stack === 0) p.allIn = true;
+      }
       break;
     }
   }
@@ -202,6 +206,8 @@ export function applyAction(
     ...gameState,
     game: { ...game, players, pot, currentBet },
     lastAggressor,
+    lastRaise,
+    revealStreet: gameState.revealStreet,
     actionLog: [
       ...gameState.actionLog,
       {
@@ -269,7 +275,7 @@ export function advanceAfterAction(state: TableState): TableState {
   if (game.currentBet === 0) {
     if (cameFullCircleStarter) {
       const ns = nextStreet(street);
-      if (ns === "showdown") return { ...state, street: "showdown" };
+      if (ns === "showdown") return { ...state, street: "showdown", revealStreet: street };
       const resetPlayers = players.map((p) => ({ ...p, bet: 0 }));
       const firstActive = findFirstActiveInOrder(nextStreetOrder, resetPlayers);
       return {
@@ -279,6 +285,8 @@ export function advanceAfterAction(state: TableState): TableState {
         currentPlayer: firstActive,
         roundStarter: firstActive,
         lastAggressor: null,
+        lastRaise: 1,
+        revealStreet: ns,
         autoWin: null,
       };
     } else {
@@ -298,6 +306,8 @@ export function advanceAfterAction(state: TableState): TableState {
       currentPlayer: firstActive,
       roundStarter: firstActive,
       lastAggressor: null,
+      lastRaise: 1,
+      revealStreet: ns,
       autoWin: null,
     };
   }
@@ -333,9 +343,9 @@ export function makeActionLabel(
   const toCall = Math.max(0, table.game.currentBet - p.bet);
   const wouldAllInCall = kind === "call" && toCall >= p.stack && p.stack > 0;
 
-  if (kind === "bet" || kind === "raise") {
-    const { pay } = computeBetOrRaiseAmount(table.game, table.street, p);
-    if (pay >= p.stack && p.stack > 0) {
+  if ((kind === "bet" || kind === "raise") && p.stack > 0) {
+    const isAllIn = p.stack + p.bet <= table.game.currentBet || p.stack === 0;
+    if (isAllIn) {
       return `All-in (${p.stack}BB)`;
     }
   }

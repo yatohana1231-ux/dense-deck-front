@@ -4,6 +4,10 @@ type HeroActionsProps = {
   heroCanBetOrRaise: boolean;
   currentBet: number;
   toCall: number;
+  minBet: number;
+  maxBet: number;
+  amount: number;
+  onAmountChange: (v: number) => void;
   onFold: () => void;
   onCheckOrCall: () => void;
   onBetOrRaise: () => void;
@@ -15,6 +19,10 @@ export default function HeroActions({
   heroCanBetOrRaise,
   currentBet,
   toCall,
+  minBet,
+  maxBet,
+  amount,
+  onAmountChange,
   onFold,
   onCheckOrCall,
   onBetOrRaise,
@@ -22,6 +30,30 @@ export default function HeroActions({
   return (
     <div className="flex flex-col items-center gap-1 mt-1">
       <div className="text-xs text-slate-300">To Call: {toCall} BB</div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-300">
+          {currentBet === 0 ? "Bet" : "Raise"} to:
+        </label>
+        <input
+          type="number"
+          min={minBet}
+          max={maxBet}
+          value={amount}
+          onChange={(e) => onAmountChange(Number(e.target.value))}
+          disabled={!isHeroTurn || !heroCanBetOrRaise}
+          className="w-24 px-2 py-1 rounded bg-slate-800 border border-slate-600 text-slate-100 text-sm"
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && isHeroTurn && heroCanBetOrRaise) {
+              e.preventDefault();
+              onBetOrRaise();
+            }
+          }}
+        />
+        <div className="text-[10px] text-slate-400">
+          Min {minBet} / Max {maxBet}
+        </div>
+      </div>
       <div className="flex gap-3">
         <button
           onClick={onFold}
