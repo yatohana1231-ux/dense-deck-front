@@ -31,7 +31,14 @@ import {
 import { createRng } from "./game/rng";
 import { useHandHistory } from "./hooks/useHandHistory";
 import { useAuth } from "./hooks/useAuth";
+import AccountView from "./views/AccountView";
+import LoginView from "./views/LoginView";
+import RegisterView from "./views/RegisterView";
+import UsernameChangeView from "./views/UsernameChangeView";
+import ResetRequestView from "./views/ResetRequestView";
+import ResetFormView from "./views/ResetFormView";
 import ReplayView from "./views/ReplayView";
+import LogoutConfirmView from "./views/LogoutConfirmView";
 
 const HERO_INDEX = 2 as const;
 const PLAYER_COUNT = 4;
@@ -80,7 +87,18 @@ function getHandDescription(v?: HandValue | null): string | undefined {
 }
 
 function App() {
-  type ViewMode = "top" | "game" | "history" | "replay";
+  type ViewMode =
+    | "top"
+    | "game"
+    | "history"
+    | "replay"
+    | "account"
+    | "login"
+    | "register"
+    | "username"
+    | "resetRequest"
+    | "resetForm"
+    | "logoutConfirm";
   const [view, setView] = useState<ViewMode>("top");
   const [table, setTable] = useState<TableState | null>(null);
   const [devShowAll, setDevShowAll] = useState(false);
@@ -102,7 +120,9 @@ function App() {
   const animTimeoutRef = useRef<number | null>(null);
   const advanceTimeoutRef = useRef<number | null>(null);
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
-  const { user, ready: authReady } = useAuth();
+  const auth = useAuth();
+  const authReady = auth.ready;
+  const isLoggedIn = !!auth.user && !auth.user.isGuest;
 
   const clearPendingTimers = () => {
     if (animTimeoutRef.current !== null) {
@@ -380,7 +400,7 @@ function App() {
   const showdownText =
     table && table.street === "showdown" && showdown
       ? `Winner: ${showdown.winners
-          .map((i) => (i === HERO_INDEX ? "You" : `Player ${i + 1}`))
+          .map((i) => (i === HERO_INDEX ? (auth.user?.username ?? `Guest-${auth.user?.userId ?? ""}`) : `Player ${i + 1}`))
           .join(", ")}`
       : undefined;
 
@@ -402,7 +422,16 @@ function App() {
   }
 
   if (view === "top") {
-    return <TopView onStart={startGame} onViewHands={handleViewHands} />;
+    return (
+      <TopView
+        onStart={startGame}
+        onViewHands={handleViewHands}
+        onLogin={() => setView("login")}
+        onLogoutRequest={() => setView("logoutConfirm")}
+        isLoggedIn={isLoggedIn}
+        username={auth.user?.username}
+      />
+    );
   }
 
   // History screen
@@ -410,6 +439,7 @@ function App() {
     return (
       <HistoryView
         history={history}
+        username={auth.user?.username}
         onSelectHand={startReplay}
         onBack={() => setView("top")}
       />
@@ -418,6 +448,101 @@ function App() {
 
   if (view === "replay" && replayRecord) {
     return <ReplayView record={replayRecord} onBack={() => setView("history")} />;
+  }
+
+  if (view === "account" && auth.user) {
+    return (
+      <AccountView
+        user={{
+          userId: auth.user.userId,
+          isGuest: auth.user.isGuest,
+          username: auth.user.username,
+          usernameChanged: auth.user.usernameChanged,
+          email: auth.user.email,
+        }}
+        onBack={() => setView("top")}
+        onLogout={() => auth.logout().then(() => setView("top"))}
+        onGotoRegister={() => setView("register")}
+        onGotoLogin={() => setView("login")}
+        onGotoUsernameChange={() => setView("username")}
+      />
+    );
+  }
+
+  if (view === "login") {
+    return (
+      <LoginView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        onSuccess={() => {
+          auth.refresh();
+          setView("top");
+        }}
+        onBack={() => setView("top")}
+        onGoRegister={() => setView("register")}
+        onGoReset={() => setView("resetRequest")}
+      />
+    );
+  }
+
+  if (view === "register") {
+    return (
+      <RegisterView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        onSuccess={() => {
+          auth.refresh();
+          setView("top");
+        }}
+        onBack={() => setView("top")}
+        onGoLogin={() => setView("login")}
+      />
+    );
+  }
+
+  if (view === "username" && auth.user) {
+    return (
+      <UsernameChangeView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        user={auth.user}
+        onSuccess={() => {
+          auth.refresh();
+          setView("account");
+        }}
+        onBack={() => setView("account")}
+      />
+    );
+  }
+
+  if (view === "resetRequest") {
+    return (
+      <ResetRequestView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        onDone={() => setView("resetForm")}
+        onBack={() => setView("login")}
+      />
+    );
+  }
+
+  if (view === "resetForm") {
+    return (
+      <ResetFormView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        onSuccess={() => setView("login")}
+        onBack={() => setView("login")}
+      />
+    );
+  }
+
+  if (view === "logoutConfirm" && auth.user) {
+    return (
+      <LogoutConfirmView
+        onConfirm={() =>
+          auth.logout().then(() => {
+            setView("top");
+          })
+        }
+        onCancel={() => setView("top")}
+      />
+    );
   }
 
   if (!table) return null;
@@ -538,7 +663,11 @@ function App() {
 
           <div className="row-start-3 col-start-2 flex flex-col items-center justify-center gap-3">
             <Seat
-              label={`You (${positionLabel(HERO_INDEX, table.btnIndex)})`}
+            label={`${
+              auth.user?.isGuest
+                ? `Guest-${auth.user?.userId ?? ""}`
+                : auth.user?.username ?? "You"
+            } (${positionLabel(HERO_INDEX, table.btnIndex)})`}
               hand={table.game.players[HERO_INDEX].hand}
               player={table.game.players[HERO_INDEX]}
             isHero

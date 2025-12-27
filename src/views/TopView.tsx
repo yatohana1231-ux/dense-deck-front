@@ -1,14 +1,27 @@
 type Props = {
   onStart: () => void;
   onViewHands: () => void;
+  onLogin: () => void;
+  onLogoutRequest: () => void;
+  isLoggedIn: boolean;
+  username?: string;
 };
 
-function TopView({ onStart, onViewHands }: Props) {
+function TopView({
+  onStart,
+  onViewHands,
+  onLogin,
+  onLogoutRequest,
+  isLoggedIn,
+  username,
+}: Props) {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center justify-center gap-6">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-2">Dense Deck Poker</h1>
-        <p className="text-base text-slate-300">TOP</p>
+        <p className="text-base text-slate-300">
+          {isLoggedIn ? `Welcome, ${username ?? ""}!` : "Guest"}
+        </p>
       </div>
       <button
         onClick={onStart}
@@ -22,6 +35,21 @@ function TopView({ onStart, onViewHands }: Props) {
       >
         View Hands
       </button>
+      {isLoggedIn ? (
+        <button
+          onClick={onLogoutRequest}
+          className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
+        >
+          Logout
+        </button>
+      ) : (
+        <button
+          onClick={onLogin}
+          className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
+        >
+          Login / Register
+        </button>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ export type AuthUser = {
   userId: string;
   isGuest: boolean;
   username: string;
+  usernameChanged?: boolean;
   email?: string | null;
 };
 

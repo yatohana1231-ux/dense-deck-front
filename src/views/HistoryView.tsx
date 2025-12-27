@@ -4,12 +4,14 @@ import Card from "../components/Card";
 type Props = {
   history: HandRecord[];
   onSelectHand: (h: HandRecord) => void;
+  username?: string;
   onBack: () => void;
 };
 
 function HistoryView({
   history,
   onSelectHand,
+  username,
   onBack,
 }: Props) {
   const renderPreview = (h: HandRecord) => {
@@ -55,7 +57,9 @@ function HistoryView({
       <div className="w-full max-w-4xl flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Hand History</h1>
-          <p className="text-sm text-slate-300">Latest up to 5 hands from DB.</p>
+          <p className="text-sm text-slate-300">
+            Latest up to 5 hands from DB. {username ? `User: ${username}` : ""}
+          </p>
         </div>
         <button
           onClick={onBack}
