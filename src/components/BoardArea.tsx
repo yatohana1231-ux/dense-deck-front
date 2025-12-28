@@ -1,5 +1,5 @@
-import Card from "./Card";
-import type { Card as CardType } from "./cards";
+import Card from "./Card.js";
+import type { Card as CardType } from "./cards.js";
 
 type BoardAreaProps = {
   cards: CardType[];
@@ -14,7 +14,7 @@ export default function BoardArea({ cards, pot }: BoardAreaProps) {
       </div>
       <div className="flex items-center justify-center h-20">
         {cards.length === 0 ? (
-          <span className="text-slate-200 text-sm">アクション後にボードをオープン</span>
+          <span className="text-slate-200 text-sm">アクション後にボ�Eドをオープン</span>
         ) : (
           <div className="flex gap-2">
             {cards.map((c, idx) => (
@@ -26,3 +26,4 @@ export default function BoardArea({ cards, pot }: BoardAreaProps) {
     </div>
   );
 }
+

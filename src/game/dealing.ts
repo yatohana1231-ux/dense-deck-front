@@ -1,8 +1,8 @@
-import rawWeights from "./weightDense.json";
-import { generateDeck } from "../components/cards";
-import type { Card as CardType } from "../components/cards";
-import { getHandClass } from "./getHandClass";
-import type { Rng } from "./rng";
+import rawWeights from "./weightDense.json.js";
+import { generateDeck } from "../components/cards.js";
+import type { Card as CardType } from "../components/cards.js";
+import { getHandClass } from "./getHandClass.js";
+import type { Rng } from "./rng.js";
 
 type WeightEntry =
   | number
@@ -130,3 +130,4 @@ export function dealWeightedHandsIndependent(
 
   throw new Error("Failed to deal weighted hands after retries");
 }
+

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useRoomState } from "../hooks/useRoomState";
-import Seat from "../components/Seat";
-import BoardArea from "../components/BoardArea";
-import RoomActionBar from "../components/RoomActionBar";
-import { useAuth } from "../hooks/useAuth";
+import { useRoomState } from "../hooks/useRoomState.js";
+import Seat from "../components/Seat.js";
+import BoardArea from "../components/BoardArea.js";
+import RoomActionBar from "../components/RoomActionBar.js";
+import { useAuth } from "../hooks/useAuth.js";
 
 type Props = {
   apiBase: string;
@@ -29,7 +29,6 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [actionKind, setActionKind] = useState<string>("check");
   const [actionAmount, setActionAmount] = useState<number>(0);
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -110,16 +109,12 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
   useEffect(() => {
     if (!table || heroSeatIndex < 0 || !isMyTurn || !actionCtx) return;
     if (actionCtx.toCall === 0) {
-      setActionKind(actionCtx.legal.includes("check") ? "check" : actionCtx.legal[0] ?? "fold");
       if (actionCtx.legal.includes("bet")) {
         setActionAmount(actionCtx.minBetTotal ?? 0);
       }
     } else {
       if (actionCtx.legal.includes("call")) {
-        setActionKind("call");
         setActionAmount(actionCtx.toCall);
-      } else {
-        setActionKind(actionCtx.legal[0] ?? "fold");
       }
       if (actionCtx.legal.includes("raise")) {
         setActionAmount(actionCtx.minRaiseTotal ?? actionCtx.toCall);
@@ -289,7 +284,6 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
               amount={actionAmount}
               onAmountChange={(v) => setActionAmount(v)}
               onAction={(k) => {
-                setActionKind(k);
                 sendAction(k);
               }}
               disabled={loading || !isMyTurn || heroSeatIndex < 0}
@@ -335,3 +329,4 @@ function getActionContext(table: any, heroSeatIndex: number) {
 
   return { toCall, minBetTotal, minRaiseTotal, maxTotal, legal };
 }
+

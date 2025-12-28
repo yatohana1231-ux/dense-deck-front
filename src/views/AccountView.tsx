@@ -1,4 +1,4 @@
-import type { AuthUser } from "../hooks/useAuth";
+import type { AuthUser } from "../hooks/useAuth.js";
 
 type Props = {
   user: AuthUser;
@@ -92,3 +92,4 @@ export default function AccountView({
     </div>
   );
 }
+

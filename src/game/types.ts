@@ -1,4 +1,4 @@
-import type { Card as CardType } from "../components/cards";
+import type { Card as CardType } from "../components/cards.js";
 
 export type Street = "preflop" | "flop" | "turn" | "river" | "showdown";
 export type ActionKind = "fold" | "check" | "call" | "bet" | "raise";
@@ -57,3 +57,4 @@ export type PendingAction = {
 };
 
 export type Position = "BTN" | "BB" | "UTG" | "CO";
+

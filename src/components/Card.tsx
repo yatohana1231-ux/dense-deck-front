@@ -1,6 +1,6 @@
 // src/components/Card.tsx
-import type { Card as CardType } from "./cards";
-import { suitToSymbol } from "./cards";
+import type { Card as CardType } from "./cards.js";
+import { suitToSymbol } from "./cards.js";
 
 export default function Card({ card }: { card: CardType }) {
   const symbol = suitToSymbol(card.suit);
@@ -21,7 +21,7 @@ export default function Card({ card }: { card: CardType }) {
         select-none
       "
     >
-      {/* 左上 */}
+      {/* 左丁E*/}
       <div
         className={`
           absolute top-1 left-1 text-xs font-bold
@@ -42,7 +42,7 @@ export default function Card({ card }: { card: CardType }) {
         {symbol}
       </div>
 
-      {/* 右下、上下逆向き */}
+      {/* 右下、上下送E��ぁE*/}
       <div
         className={`
           absolute bottom-1 right-1 text-xs font-bold rotate-180
@@ -55,3 +55,4 @@ export default function Card({ card }: { card: CardType }) {
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
-import type { HandRecord } from "../game/history/recorder";
-import Card from "../components/Card";
+import type { HandRecord } from "../game/history/recorder.js";
+import Card from "../components/Card.js";
 
 type Props = {
   history: HandRecord[];
@@ -96,3 +96,4 @@ function HistoryView({
 }
 
 export default HistoryView;
+

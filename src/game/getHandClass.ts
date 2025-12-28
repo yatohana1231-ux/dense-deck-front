@@ -1,10 +1,10 @@
 // src/game/getHandClass.ts
 
-import type { Card } from "../components/cards";
+import type { Card } from "../components/cards.js";
 
 const order = "23456789TJQKA";
 
-/** 2枚のカードから "AKs" / "QJo" / "88" のようなキーを作る */
+/** 2枚�EカードかめE"AKs" / "QJo" / "88" のようなキーを作る */
 export function getHandClass(c1: Card, c2: Card): string {
   const r1 = c1.rank;
   const r2 = c2.rank;
@@ -17,3 +17,4 @@ export function getHandClass(c1: Card, c2: Card): string {
   const suited = c1.suit === c2.suit;
   return `${hi}${lo}${suited ? "s" : "o"}`;
 }
+

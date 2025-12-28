@@ -1,7 +1,7 @@
-import Card from "./Card";
-import CardBack from "./CardBack";
-import type { Card as CardType } from "./cards";
-import type { PlayerState } from "../game/table";
+import Card from "./Card.js";
+import CardBack from "./CardBack.js";
+import type { Card as CardType } from "./cards.js";
+import type { PlayerState } from "../game/table.js";
 
 type SeatProps = {
   label: string;
@@ -34,7 +34,7 @@ export default function Seat({
         isActive ? "" : "opacity-40 grayscale"
       }`}
     >
-      {/* アクションポップアップ：高さを固定してレイアウト崩れを防ぐ */}
+      {/* アクションポップアチE�E�E�高さを固定してレイアウト崩れを防ぁE*/}
       <div className="h-6 flex items-center">
         {popupText ? (
           <div className="text-xs px-2 py-0.5 rounded-full bg-slate-800/90 border border-slate-600 text-slate-100">
@@ -86,3 +86,4 @@ export default function Seat({
     </div>
   );
 }
+

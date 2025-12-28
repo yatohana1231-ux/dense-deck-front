@@ -1,4 +1,4 @@
-import type { Position } from "./types";
+import type { Position } from "./types.js";
 
 export function getPosition(
   playerIndex: number,
@@ -29,3 +29,4 @@ export function getPostflopOrder(btnIndex: number, playerCount: number): number[
   // Postflop action: BB -> UTG -> CO -> BTN -> BB.
   return [bb, utg, co, btn];
 }
+

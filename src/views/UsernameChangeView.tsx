@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AuthUser } from "../hooks/useAuth";
+import type { AuthUser } from "../hooks/useAuth.js";
 
 type Props = {
   apiBase: string;
@@ -68,3 +68,4 @@ export default function UsernameChangeView({ apiBase, user, onSuccess, onBack }:
     </div>
   );
 }
+

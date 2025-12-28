@@ -1,7 +1,7 @@
-import type { Card as CardType } from "../../components/cards";
-import type { HandValue } from "../handEval";
-import { evaluateBestOfSeven, compareHandValues } from "../handEval";
-import type { ActionLogEntry, TableState, Street } from "../table";
+import type { Card as CardType } from "../../components/cards.js";
+import type { HandValue } from "../handEval.js";
+import { evaluateBestOfSeven, compareHandValues } from "../handEval.js";
+import type { ActionLogEntry, TableState, Street } from "../table.js";
 
 export type HandRecord = {
   handId: string;
@@ -110,3 +110,4 @@ export async function saveHandRecord(record: HandRecord) {
   // Node/SSR: optional file write (skipped in browser builds to avoid missing types).
   return;
 }
+

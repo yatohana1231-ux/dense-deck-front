@@ -1,9 +1,9 @@
 // src/game/board.ts
-import type { Card } from "./cards";
+import type { Card } from "./cards.js";
 
 /**
- * 残りデッキからフロップ/ターン/リバーを生成する
- * burn はとりあえず考慮しないシンプル版
+ * 残りチE��キからフロチE�E/ターン/リバ�Eを生成すめE
+ * burn はとりあえず老E�EしなぁE��ンプル牁E
  */
 export function dealBoard(deck: Card[]): {
   flop: Card[];
@@ -22,3 +22,4 @@ export function dealBoard(deck: Card[]): {
 
   return { flop, turn, river, rest };
 }
+

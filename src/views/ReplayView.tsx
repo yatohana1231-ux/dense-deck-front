@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { HandRecord } from "../game/history/recorder";
-import type { TableState, ActionLogEntry, PlayerState, Street } from "../game/table";
-import Seat from "../components/Seat";
-import BoardArea from "../components/BoardArea";
-import InfoBar from "../components/InfoBar";
-import { HAND_CATEGORY_LABEL, compareHandValues, evaluateBestOfSeven } from "../game/handEval";
-import type { Card as CardType } from "../components/cards";
+import type { HandRecord } from "../game/history/recorder.js";
+import type { TableState, ActionLogEntry, PlayerState, Street } from "../game/table.js";
+import Seat from "../components/Seat.js";
+import BoardArea from "../components/BoardArea.js";
+import InfoBar from "../components/InfoBar.js";
+import { HAND_CATEGORY_LABEL, compareHandValues, evaluateBestOfSeven } from "../game/handEval.js";
+import type { Card as CardType } from "../components/cards.js";
 
 const HERO_INDEX = 2;
 
@@ -317,3 +317,4 @@ function ReplayView({ record, onBack }: Props) {
 }
 
 export default ReplayView;
+

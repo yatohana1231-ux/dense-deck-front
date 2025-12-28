@@ -1,10 +1,10 @@
 // src/game/deck.ts
 
-import type { Card } from "../components/cards";   // ← ここを type 付きに
-import { generateDeck } from "../components/cards";
-import type { Rng } from "./rng";
+import type { Card } from "../components/cards.js";   // ↁEここめEtype 付きに
+import { generateDeck } from "../components/cards.js";
+import type { Rng } from "./rng.js";
 
-/** フィッシャー–イェーツでシャッフル */
+/** フィチE��ャー–イェーチE��シャチE��ル */
 export function shuffle(deck: Card[], rng?: Rng): Card[] {
   const random = rng?.random ?? Math.random;
   const arr = [...deck];
@@ -15,12 +15,12 @@ export function shuffle(deck: Card[], rng?: Rng): Card[] {
   return arr;
 }
 
-/** 新しいシャッフル済みデッキを生成 */
+/** 新しいシャチE��ル済みチE��キを生戁E*/
 export function createShuffledDeck(rng?: Rng): Card[] {
   return shuffle(generateDeck(), rng);
 }
 
-/** 指定人数に2枚ずつハンドを配る（通常モード用） */
+/** 持E��人数に2枚ずつハンドを配る�E�通常モード用�E�E*/
 export function dealHands(
   deck: Card[],
   playerCount: number
@@ -36,3 +36,4 @@ export function dealHands(
   const rest = deck.slice(index);
   return { hands, rest };
 }
+

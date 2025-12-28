@@ -5,16 +5,16 @@ import {
   type GameState,
   type TableState,
   type PendingAction,
-} from "./types";
+} from "./types.js";
 import {
   getPositions,
   getPreflopOrder,
   getPostflopOrder,
-} from "./positions";
-import { pickAiAction, getLegalActions as getLegalActionsImpl } from "./ai";
-import type { Rng } from "./rng";
-import { defaultRng } from "./rng";
-import { dealHandsFacade } from "../deal/dealFacade"
+} from "./positions.js";
+import { pickAiAction, getLegalActions as getLegalActionsImpl } from "./ai.js";
+import type { Rng } from "./rng.js";
+import { defaultRng } from "./rng.js";
+import { dealHandsFacade } from "../deal/dealFacade.js"
 
 export type {
   Street,
@@ -24,7 +24,7 @@ export type {
   TableState,
   PendingAction,
   ActionLogEntry,
-} from "./types";
+} from "./types.js";
 
 function findFirstActiveInOrder(order: number[], players: PlayerState[]): number {
   for (const seat of order) {
@@ -366,3 +366,4 @@ export function makeActionLabel(
       return "Raise";
   }
 }
+

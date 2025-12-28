@@ -1,10 +1,10 @@
 // src/game/denseDeal.ts
 
-import type { Card } from "./cards";
-import { createShuffledDeck } from "../game/deck";
-import { isAllowedHand } from "../game/allowed"
+import type { Card } from "./cards.js";
+import { createShuffledDeck } from "../game/deck.js";
+import { isAllowedHand } from "../game/allowed.js"
 
-/** Dense Deck 用：許可されたハンドが出るまで2枚を引き直す */
+/** Dense Deck 用�E�許可されたハンドが出るまで2枚を引き直ぁE*/
 export function dealDenseHand(deck: Card[]): { hand: Card[]; rest: Card[] } {
   let rest = [...deck];
 
@@ -24,7 +24,7 @@ export function dealDenseHand(deck: Card[]): { hand: Card[]; rest: Card[] } {
   throw new Error("No allowed hands left in the deck!");
 }
 
-/** 指定人数ぶん、Dense Deck ルールでハンドを配る */
+/** 持E��人数ぶん、Dense Deck ルールでハンドを配る */
 export function dealDenseHands(playerCount: number) {
   let deck = createShuffledDeck();
   const hands: Card[][] = [];
@@ -37,3 +37,4 @@ export function dealDenseHands(playerCount: number) {
 
   return { hands, deck };
 }
+

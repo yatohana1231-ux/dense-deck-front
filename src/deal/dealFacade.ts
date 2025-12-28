@@ -1,8 +1,8 @@
-import type { Card as CardType } from "../components/cards";
-import { dealWeightedHandsIndependent } from "../game/dealing";
-import { dealFromApi, type Mode } from "../api/deal";
-import { createShuffledDeck } from "../game/deck";
-import type { Rng } from "../game/rng";
+import type { Card as CardType } from "../components/cards.js";
+import { dealWeightedHandsIndependent } from "../game/dealing.js";
+import { dealFromApi, type Mode } from "../api/deal.js";
+import { createShuffledDeck } from "../game/deck.js";
+import type { Rng } from "../game/rng.js";
 
 export type DealSource = "local" | "api";
 
@@ -60,3 +60,4 @@ export async function dealHandsFacade(params: {
     boardReserved: parsedBoard,
   };
 }
+

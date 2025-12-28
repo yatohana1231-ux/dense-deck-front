@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { connectRoomWs, type RoomSummary, type InHandState, type WsMessage } from "../api/ws";
+import { connectRoomWs, type RoomSummary, type InHandState, type WsMessage } from "../api/ws.js";
 
 type RoomState = {
   room: RoomSummary | null;
@@ -22,3 +22,4 @@ export function useRoomState(apiBase: string, roomId: string) {
 
   return state;
 }
+

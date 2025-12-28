@@ -1,7 +1,7 @@
-import { evaluateBestOfSeven } from "./handEval";
-import type { ActionKind, TableState, Position } from "./types";
-import { getPosition } from "./positions";
-import type { Rng } from "./rng";
+import { evaluateBestOfSeven } from "./handEval.js";
+import type { ActionKind, TableState, Position } from "./types.js";
+import { getPosition } from "./positions.js";
+import type { Rng } from "./rng.js";
 
 function getVisibleBoard(table: TableState) {
   const { flop, turn, river } = table.game;
@@ -174,3 +174,4 @@ export function pickAiAction(
     return canFold ? "fold" : (canCall ? "call" : "check");
   }
 }
+

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { HandRecord } from "../game/history/recorder";
+import type { HandRecord } from "../game/history/recorder.js";
 
 const mergePayload = (item: any): HandRecord => {
   if (item.payload && typeof item.payload === "object") {
@@ -53,3 +53,4 @@ export function useHandHistory(shouldLoad: boolean, limit = 5) {
 
   return { history, refresh };
 }
+

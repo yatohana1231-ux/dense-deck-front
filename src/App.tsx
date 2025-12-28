@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import BoardArea from "./components/BoardArea";
-import HeroActions from "./components/HeroActions";
-import Seat from "./components/Seat";
-import InfoBar from "./components/InfoBar";
-import type { Card as CardType } from "./components/cards";
-import TopView from "./views/TopView";
-import HistoryView from "./views/HistoryView";
+import BoardArea from "./components/BoardArea.js";
+import HeroActions from "./components/HeroActions.js";
+import Seat from "./components/Seat.js";
+import InfoBar from "./components/InfoBar.js";
+import type { Card as CardType } from "./components/cards.js";
+import TopView from "./views/TopView.js";
+import HistoryView from "./views/HistoryView.js";
 import {
   evaluateBestOfSeven,
   compareHandValues,
   HAND_CATEGORY_LABEL,
   type HandValue,
-} from "./game/handEval";
+} from "./game/handEval.js";
 import {
   type ActionKind,
   type PendingAction,
@@ -22,25 +22,25 @@ import {
   createInitialTable,
   makeActionLabel,
   pickAiAction,
-} from "./game/table";
+} from "./game/table.js";
 import {
   buildHandRecord,
   saveHandRecord,
   type HandRecord,
-} from "./game/history/recorder";
-import { createRng } from "./game/rng";
-import { useHandHistory } from "./hooks/useHandHistory";
-import { useAuth } from "./hooks/useAuth";
-import AccountView from "./views/AccountView";
-import LoginView from "./views/LoginView";
-import RegisterView from "./views/RegisterView";
-import UsernameChangeView from "./views/UsernameChangeView";
-import ResetRequestView from "./views/ResetRequestView";
-import ResetFormView from "./views/ResetFormView";
-import ReplayView from "./views/ReplayView";
-import LogoutConfirmView from "./views/LogoutConfirmView";
-import RoomListView from "./views/RoomListView";
-import RoomDetailView from "./views/RoomDetailView";
+} from "./game/history/recorder.js";
+import { createRng } from "./game/rng.js";
+import { useHandHistory } from "./hooks/useHandHistory.js";
+import { useAuth } from "./hooks/useAuth.js";
+import AccountView from "./views/AccountView.js";
+import LoginView from "./views/LoginView.js";
+import RegisterView from "./views/RegisterView.js";
+import UsernameChangeView from "./views/UsernameChangeView.js";
+import ResetRequestView from "./views/ResetRequestView.js";
+import ResetFormView from "./views/ResetFormView.js";
+import ReplayView from "./views/ReplayView.js";
+import LogoutConfirmView from "./views/LogoutConfirmView.js";
+import RoomListView from "./views/RoomListView.js";
+import RoomDetailView from "./views/RoomDetailView.js";
 
 const HERO_INDEX = 2 as const;
 const PLAYER_COUNT = 4;
@@ -775,3 +775,4 @@ const visibleBoard = useMemo<CardType[]>(() => {
 }
 
 export default App;
+

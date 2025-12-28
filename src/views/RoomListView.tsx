@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { RoomSummary, WsMessage } from "../api/ws";
-import { connectRoomListWs } from "../api/ws";
+import type { RoomSummary, WsMessage } from "../api/ws.js";
+import { connectRoomListWs } from "../api/ws.js";
 
 type Props = {
   apiBase: string;
@@ -52,3 +52,4 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
     </div>
   );
 }
+
