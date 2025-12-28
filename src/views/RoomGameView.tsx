@@ -28,6 +28,7 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionAmount, setActionAmount] = useState(0);
+  const [startSent, setStartSent] = useState(false);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -43,6 +44,18 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
     }, 20000);
     return () => window.clearInterval(id);
   }, [apiBase, roomId]);
+
+  const seatCount = room?.seats?.length ?? 0;
+  const neededPlayers = Math.max(0, 2 - seatCount);
+
+  // auto-start when enough players and no hand yet
+  useEffect(() => {
+    if (table) return;
+    if (neededPlayers > 0) return;
+    if (startSent) return;
+    setStartSent(true);
+    postJson(`${apiBase}/api/rooms/${roomId}/start`, {}).catch(() => setStartSent(false));
+  }, [table, neededPlayers, apiBase, roomId, startSent]);
 
   const sendAction = async (kind: string) => {
     if (heroSeatIndex < 0) {
@@ -62,13 +75,19 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
     }
   };
 
-  const seatCount = room?.seats?.length ?? 0;
-  const neededPlayers = Math.max(0, 2 - seatCount);
   const maxSeats = room?.maxSeats ?? 4;
 
-  // arrange seats: index 0 top, 1 right, 2 bottom(hero), 3 left
-  const seatOrder = useMemo(() => [0, 1, 2, 3].slice(0, maxSeats), [maxSeats]);
-  const positions = ["CO", "BTN", "You", "UTG"]; // relative labels
+  // Seat order rotated so hero (if seated) is at bottom index (maxSeats - 1)
+  const seatOrder = useMemo(() => {
+    const base = [0, 1, 2, 3].slice(0, maxSeats);
+    if (heroSeatIndex < 0) return base;
+    const n = base.length;
+    const bottom = n - 1;
+    return base.map((_, i) => {
+      const src = (heroSeatIndex + (i - bottom) + n) % n;
+      return src;
+    });
+  }, [maxSeats, heroSeatIndex]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
@@ -94,32 +113,23 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
         )}
 
         <div className="relative w-full aspect-[16/9]">
-          {/* Board */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-full max-w-3xl">
-              <BoardArea cards={table ? table.game.flop.concat(table.game.turn, table.game.river) : []} pot={table?.game.pot ?? 0} />
-            </div>
-          </div>
-
-          {/* Seats */}
+          {/* Seats layout: left, top, right, bottom(self) */}
           {seatOrder.map((seatIdx, i) => {
             const seat = room?.seats?.find((s) => s.seatIndex === seatIdx);
-            const posClass =
-              i === 0
-                ? "absolute top-6 left-1/2 -translate-x-1/2"
-                : i === 1
-                ? "absolute top-1/2 right-8 -translate-y-1/2"
-                : i === 2
-                ? "absolute bottom-4 left-1/2 -translate-x-1/2"
-                : "absolute top-1/2 left-8 -translate-y-1/2";
-
             const player =
               table?.game.players?.[seatIdx] ??
-              (seat
-                ? { hand: [], bet: 0, stack: seat.stack, folded: false, allIn: false }
-                : null);
+              (seat ? { hand: [], bet: 0, stack: seat.stack, folded: false, allIn: false } : null);
             const showCards = seatIdx === heroSeatIndex || table?.street === "showdown";
             const isEmpty = !seat;
+
+            const posClass =
+              i === 0
+                ? "absolute top-1/2 left-6 -translate-y-1/2"
+                : i === 1
+                ? "absolute top-6 left-1/2 -translate-x-1/2"
+                : i === 2
+                ? "absolute top-1/2 right-6 -translate-y-1/2"
+                : "absolute bottom-4 left-1/2 -translate-x-1/2";
 
             return (
               <div key={seatIdx} className={`${posClass} flex flex-col items-center gap-2`}>
@@ -128,7 +138,7 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
                     isEmpty ? "bg-slate-700/40 text-slate-400" : "bg-slate-700 text-slate-100"
                   }`}
                 >
-                  {seat ? seat.username : positions[i] ?? `Seat ${seatIdx}`}
+                  {seat ? seat.username : positionLabel(seatIdx, table?.btnIndex ?? 0)}
                 </div>
                 {player ? (
                   <Seat
@@ -147,6 +157,18 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
               </div>
             );
           })}
+
+          {/* Board: only show when table exists */}
+          {table && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-full max-w-3xl">
+                <BoardArea
+                  cards={table ? table.game.flop.concat(table.game.turn, table.game.river) : []}
+                  pot={table?.game.pot ?? 0}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -467,6 +467,10 @@ const visibleBoard = useMemo<CardType[]>(() => {
           setSelectedRoomId(id);
           setView("roomDetail");
         }}
+        onJoin={(id) => {
+          setSelectedRoomId(id);
+          setView("roomGame");
+        }}
         onBack={() => setView("top")}
       />
     );

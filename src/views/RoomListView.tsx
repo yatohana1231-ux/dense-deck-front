@@ -5,15 +5,17 @@ import { connectRoomListWs } from "../api/ws.js";
 type Props = {
   apiBase: string;
   onSelect: (roomId: string) => void;
+  onJoin: (roomId: string) => void;
   onBack: () => void;
 };
 
-export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
+export default function RoomListView({ apiBase, onSelect, onJoin, onBack }: Props) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const ws = connectRoomListWs(apiBase, (msg: WsMessage) => {
@@ -43,11 +45,30 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
       setName("");
       setPassword("");
       setError(null);
-      onSelect(room.id);
+      onJoin(room.id);
     } catch (e: any) {
       setError(e?.message ?? String(e));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const joinRoom = async (roomId: string, pw?: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/rooms/${roomId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password: pw || undefined }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setError(null);
+      onJoin(roomId);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,8 +103,8 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
           />
           <button
             onClick={createRoom}
-            disabled={creating}
-            className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
+            disabled={creating || loading}
+            className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {creating ? "Creating..." : "Create"}
           </button>
@@ -104,7 +125,19 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
                 {r.tag} / {r.state} / {r.seats.length}/{r.maxSeats} seats
               </span>
             </div>
-            {r.hasPassword && <span className="text-xs text-rose-400">PW</span>}
+            <div className="flex items-center gap-2">
+              {r.hasPassword && <span className="text-xs text-rose-400">PW</span>}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  joinRoom(r.id);
+                }}
+                disabled={loading}
+                className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Join
+              </button>
+            </div>
           </div>
         ))}
         {rooms.length === 0 && (
@@ -114,4 +147,3 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
     </div>
   );
 }
-
