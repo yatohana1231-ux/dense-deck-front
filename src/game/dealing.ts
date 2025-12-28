@@ -1,4 +1,4 @@
-import rawWeights from "./weightDense.json.js";
+import rawWeights from "./weightDense.json";
 import { generateDeck } from "../components/cards.js";
 import type { Card as CardType } from "../components/cards.js";
 import { getHandClass } from "./getHandClass.js";

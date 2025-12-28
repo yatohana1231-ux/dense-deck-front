@@ -13,15 +13,15 @@ export type HandCategory =
   | "straight-flush";
 
 export const HAND_CATEGORY_LABEL: Record<HandCategory, string> = {
-  "high-card": "ハイカーチE,
+  "high-card": "ハイカード",
   "one-pair": "ワンペア",
-  "two-pair": "チE�Eペア",
-  "three-of-a-kind": "スリーカーチE,
-  "straight": "ストレーチE,
-  "flush": "フラチE��ュ",
+  "two-pair": "チE�Eペア",
+  "three-of-a-kind": "スリーカード",
+  "straight": "ストレート",
+  "flush": "フラッシュ",
   "full-house": "フルハウス",
-  "four-of-a-kind": "フォーカーチE,
-  "straight-flush": "ストレートフラチE��ュ",
+  "four-of-a-kind": "フォーカード",
+  "straight-flush": "ストレートフラッシュ",
 };
 
 const rankOrder: Rank[] = [
@@ -63,8 +63,8 @@ const categoryIndex: Record<HandCategory, number> = Object.fromEntries(
 export type HandValue = {
   category: HandCategory;
   categoryIndex: number;
-  ranks: Rank[]; // 強さ比輁E��に並べたランク
-  cards: Card[]; // 実際に使われてぁE��5极E
+  ranks: Rank[];
+  cards: Card[];
 };
 
 function sortRanksDesc(ranks: Rank[]): Rank[] {
@@ -72,7 +72,7 @@ function sortRanksDesc(ranks: Rank[]): Rank[] {
 }
 
 /**
- * 与えられぁE枚�Eカードを評価
+ * 与えられぁE枚�Eカードを評価
  */
 export function evaluate5(cards: Card[]): HandValue {
   if (cards.length !== 5) {
@@ -127,7 +127,7 @@ export function evaluate5(cards: Card[]): HandValue {
     }
   }
 
-  // 出現回数別にランクを�E顁E
+  // 出現回数別にランクを�E顁E
   const singles: Rank[] = [];
   const pairs: Rank[] = [];
   const trips: Rank[] = [];
@@ -148,7 +148,7 @@ export function evaluate5(cards: Card[]): HandValue {
 
   // 役判宁E
 
-  // 1) ストレートフラチE��ュ
+  // 1) ストレートフラチE��ュ
   if (isStraight && isFlush && straightHigh) {
     return {
       category: "straight-flush",
@@ -170,11 +170,11 @@ export function evaluate5(cards: Card[]): HandValue {
     };
   }
 
-  // 3) フルハウス�E�E+2 or 3+3�E�E
+  // 3) フルハウス�E�E+2 or 3+3�E�E
   if (tripsDesc.length >= 1 && (pairsDesc.length >= 1 || tripsDesc.length >= 2)) {
     const tripRank = tripsDesc[0];
     const pairRank =
-      pairsDesc[0] ?? tripsDesc[1]; // 3+3+X のとき�E2つ目の3を�Eア扱ぁE
+      pairsDesc[0] ?? tripsDesc[1]; // 3+3+X のとき�E2つ目の3を�Eア扱ぁE
     return {
       category: "full-house",
       categoryIndex: categoryIndex["full-house"],
@@ -183,7 +183,7 @@ export function evaluate5(cards: Card[]): HandValue {
     };
   }
 
-  // 4) フラチE��ュ
+  // 4) フラチE��ュ
   if (isFlush) {
     const sortedFlush = sortRanksDesc(ranks);
     return {
@@ -216,7 +216,7 @@ export function evaluate5(cards: Card[]): HandValue {
     };
   }
 
-  // 7) チE�Eペア
+  // 7) チE�Eペア
   if (pairsDesc.length >= 2) {
     const topTwo = pairsDesc.slice(0, 2); // 強ぁEつ
     const kicker = singlesDesc[0];
@@ -251,7 +251,7 @@ export function evaluate5(cards: Card[]): HandValue {
 }
 
 /**
- * 役の強さ比輁E��E > b なら正、a < b なら負、同じなめE�E�E
+ * 役の強さ比輁E��E > b なら正、a < b なら負、同じなめE�E�E
  */
 export function compareHandValues(a: HandValue, b: HandValue): number {
   if (a.categoryIndex !== b.categoryIndex) {
@@ -269,7 +269,7 @@ export function compareHandValues(a: HandValue, b: HandValue): number {
 }
 
 /**
- * ホ�EルカーチE极E+ ボ�Eド（最大5枚）から最強の5枚役を返す
+ * ホ�EルカーチE极E+ ボ�Eド（最大5枚）から最強の5枚役を返す
  */
 export function evaluateBestOfSeven(
   holeCards: Card[],
@@ -280,12 +280,12 @@ export function evaluateBestOfSeven(
     throw new Error("evaluateBestOfSeven expects 5、E cards total");
   }
 
-  // 5枚ちめE��どならそのまま評価
+  // 5枚ちめE��どならそのまま評価
   if (all.length === 5) {
     return evaluate5(all);
   }
 
-  // 7枚�E場合�E 7C5=21 通りの5枚を全探索
+  // 7枚�E場合�E 7C5=21 通りの5枚を全探索
   let best: HandValue | null = null;
 
   for (let i = 0; i < all.length - 4; i++) {
