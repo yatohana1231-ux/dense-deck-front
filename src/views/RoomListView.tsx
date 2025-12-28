@@ -10,6 +10,10 @@ type Props = {
 
 export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const ws = connectRoomListWs(apiBase, (msg: WsMessage) => {
@@ -17,6 +21,35 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
     });
     return () => ws.close();
   }, [apiBase]);
+
+  const createRoom = async () => {
+    setCreating(true);
+    try {
+      const res = await fetch(`${apiBase}/api/rooms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: name || undefined,
+          password: password || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as any;
+      const room = (data?.room ?? data) as RoomSummary;
+      if (!room?.id) {
+        throw new Error("Invalid response from server");
+      }
+      setName("");
+      setPassword("");
+      setError(null);
+      onSelect(room.id);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
@@ -29,6 +62,35 @@ export default function RoomListView({ apiBase, onSelect, onBack }: Props) {
           Back
         </button>
       </div>
+
+      <div className="w-full max-w-4xl bg-slate-800/50 rounded-lg border border-slate-700 p-4 flex flex-col gap-2">
+        <div className="text-sm font-semibold">Create Room</div>
+        <div className="flex flex-col sm:flex-row gap-2 text-sm">
+          <input
+            type="text"
+            placeholder="Room name (optional)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="px-3 py-2 rounded bg-slate-900 border border-slate-700 text-slate-100 flex-1"
+          />
+          <input
+            type="password"
+            placeholder="Password (optional)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="px-3 py-2 rounded bg-slate-900 border border-slate-700 text-slate-100 flex-1"
+          />
+          <button
+            onClick={createRoom}
+            disabled={creating}
+            className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
+          >
+            {creating ? "Creating..." : "Create"}
+          </button>
+        </div>
+        {error && <div className="text-xs text-rose-400">{error}</div>}
+      </div>
+
       <div className="w-full max-w-4xl bg-slate-800/50 rounded-lg border border-slate-700 divide-y divide-slate-700">
         {rooms.map((r) => (
           <div

@@ -1,0 +1,206 @@
+import { useEffect, useMemo, useState } from "react";
+import BoardArea from "../components/BoardArea.js";
+import Seat from "../components/Seat.js";
+import RoomActionBar from "../components/RoomActionBar.js";
+import { useRoomState } from "../hooks/useRoomState.js";
+import { useAuth } from "../hooks/useAuth.js";
+
+type Props = {
+  apiBase: string;
+  roomId: string;
+  onBack: () => void;
+};
+
+async function postJson(url: string, body: any) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
+  const { room, game, error: wsError } = useRoomState(apiBase, roomId);
+  const auth = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [actionAmount, setActionAmount] = useState(0);
+
+  const heroUserId = auth.user?.userId ?? "";
+  const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
+  const table = game?.table;
+  const heroPlayer = table?.game?.players?.[heroSeatIndex];
+  const isMyTurn = table?.currentPlayer === heroSeatIndex;
+  const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
+
+  // heartbeat
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      postJson(`${apiBase}/api/rooms/${roomId}/heartbeat`, {}).catch(() => {});
+    }, 20000);
+    return () => window.clearInterval(id);
+  }, [apiBase, roomId]);
+
+  const sendAction = async (kind: string) => {
+    if (heroSeatIndex < 0) {
+      setError("You are not seated in this room.");
+      return;
+    }
+    const action: any = { playerIndex: heroSeatIndex, kind };
+    if (kind === "bet" || kind === "raise") action.amount = actionAmount;
+    setLoading(true);
+    try {
+      await postJson(`${apiBase}/api/rooms/${roomId}/action`, action);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const seatCount = room?.seats?.length ?? 0;
+  const neededPlayers = Math.max(0, 2 - seatCount);
+  const maxSeats = room?.maxSeats ?? 4;
+
+  // arrange seats: index 0 top, 1 right, 2 bottom(hero), 3 left
+  const seatOrder = useMemo(() => [0, 1, 2, 3].slice(0, maxSeats), [maxSeats]);
+  const positions = ["CO", "BTN", "You", "UTG"]; // relative labels
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
+      <div className="w-full max-w-5xl flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Online Table</h1>
+        <button
+          onClick={onBack}
+          className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+        >
+          Back
+        </button>
+      </div>
+
+      {(error || wsError) && (
+        <div className="w-full max-w-5xl text-sm text-rose-400">{error ?? wsError}</div>
+      )}
+
+      <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 p-4 relative overflow-hidden">
+        {!table && (
+          <div className="text-sm text-amber-300 mb-3">
+            Need {neededPlayers} more player{neededPlayers === 1 ? "" : "s"} to start a hand.
+          </div>
+        )}
+
+        <div className="relative w-full aspect-[16/9]">
+          {/* Board */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-full max-w-3xl">
+              <BoardArea cards={table ? table.game.flop.concat(table.game.turn, table.game.river) : []} pot={table?.game.pot ?? 0} />
+            </div>
+          </div>
+
+          {/* Seats */}
+          {seatOrder.map((seatIdx, i) => {
+            const seat = room?.seats?.find((s) => s.seatIndex === seatIdx);
+            const posClass =
+              i === 0
+                ? "absolute top-6 left-1/2 -translate-x-1/2"
+                : i === 1
+                ? "absolute top-1/2 right-8 -translate-y-1/2"
+                : i === 2
+                ? "absolute bottom-4 left-1/2 -translate-x-1/2"
+                : "absolute top-1/2 left-8 -translate-y-1/2";
+
+            const player =
+              table?.game.players?.[seatIdx] ??
+              (seat
+                ? { hand: [], bet: 0, stack: seat.stack, folded: false, allIn: false }
+                : null);
+            const showCards = seatIdx === heroSeatIndex || table?.street === "showdown";
+            const isEmpty = !seat;
+
+            return (
+              <div key={seatIdx} className={`${posClass} flex flex-col items-center gap-2`}>
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    isEmpty ? "bg-slate-700/40 text-slate-400" : "bg-slate-700 text-slate-100"
+                  }`}
+                >
+                  {seat ? seat.username : positions[i] ?? `Seat ${seatIdx}`}
+                </div>
+                {player ? (
+                  <Seat
+                    label={positionLabel(seatIdx, table?.btnIndex ?? 0)}
+                    hand={player.hand ?? []}
+                    player={player}
+                    isWinner={false}
+                    showCards={showCards}
+                    isButton={table?.btnIndex === seatIdx}
+                    popupText={undefined}
+                    isActive={table?.currentPlayer === seatIdx}
+                  />
+                ) : (
+                  <div className="w-24 h-28 rounded-xl border border-slate-700 bg-slate-800/30" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {table && (
+        <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 p-4">
+          <div className="text-sm font-semibold mb-2">Send Action</div>
+          <RoomActionBar
+            currentPlayer={table.currentPlayer ?? 0}
+            legal={actionCtx?.legal ?? []}
+            amount={actionAmount}
+            onAmountChange={(v) => setActionAmount(v)}
+            onAction={(k) => sendAction(k)}
+            disabled={loading || !isMyTurn || heroSeatIndex < 0}
+            toCall={actionCtx?.toCall}
+            minBetTotal={actionCtx?.minBetTotal}
+            minRaiseTotal={actionCtx?.minRaiseTotal}
+            stack={heroPlayer?.stack}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function positionLabel(playerIndex: number, btnIndex: number) {
+  const n = 4;
+  if (playerIndex === btnIndex) return "BTN";
+  if (playerIndex === (btnIndex + 1) % n) return "BB";
+  if (playerIndex === (btnIndex + 2) % n) return "UTG";
+  return "CO";
+}
+
+function getActionContext(table: any, heroSeatIndex: number) {
+  if (!table || heroSeatIndex < 0) return null;
+  const p = table.game?.players?.[heroSeatIndex];
+  if (!p) return null;
+  const currentBet = table.game?.currentBet ?? 0;
+  const lastRaise = table.lastRaise ?? 1;
+  const toCall = Math.max(0, currentBet - (p.bet ?? 0));
+  const maxTotal = (p.bet ?? 0) + (p.stack ?? 0);
+  const minBetTotal = Math.min(Math.max(1, p.bet ?? 0, currentBet), maxTotal);
+  const minRaiseTotal = Math.min(
+    currentBet === 0 ? minBetTotal : Math.max(currentBet + lastRaise, currentBet + 1),
+    maxTotal
+  );
+
+  const legal: string[] = ["fold"];
+  if (toCall === 0) {
+    legal.push("check");
+    if ((p.stack ?? 0) > 0) legal.push("bet");
+  } else {
+    legal.push("call");
+    if ((p.stack ?? 0) > toCall) legal.push("raise");
+  }
+
+  return { toCall, minBetTotal, minRaiseTotal, maxTotal, legal };
+}

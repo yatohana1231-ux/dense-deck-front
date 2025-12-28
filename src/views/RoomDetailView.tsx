@@ -9,6 +9,7 @@ type Props = {
   apiBase: string;
   roomId: string;
   onBack: () => void;
+  onEnterTable: () => void;
 };
 
 async function postJson(url: string, body: any) {
@@ -24,7 +25,7 @@ async function postJson(url: string, body: any) {
   return res.json();
 }
 
-export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
+export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }: Props) {
   const { room, game, error: wsError } = useRoomState(apiBase, roomId);
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,12 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
   const heroPlayer = table?.game?.players?.[heroSeatIndex];
   const isMyTurn = table?.currentPlayer === heroSeatIndex;
   const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
+  const isSeated = heroSeatIndex >= 0;
+  const maxSeats = room?.maxSeats ?? 4;
+  const seatCount = room?.seats?.length ?? 0;
+  const neededPlayers = Math.max(0, 2 - seatCount);
+  const canStart =
+    seatCount >= 2 && (room?.state === "WAITING" || room?.state === "STARTING");
 
   // heartbeat every 20s
   useEffect(() => {
@@ -73,6 +80,9 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
   const start = async () => {
     setLoading(true);
     try {
+      if (!canStart) {
+        throw new Error("Need at least 2 seated players to start");
+      }
       await postJson(`${apiBase}/api/rooms/${roomId}/start`, {});
       setError(null);
     } catch (e: any) {
@@ -159,15 +169,22 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
           <div className="flex gap-2">
             <button
               onClick={join}
-              disabled={loading}
-              className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold"
+              disabled={loading || isSeated}
+              className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Join
+              {isSeated ? "Joined" : "Join"}
+            </button>
+            <button
+              onClick={onEnterTable}
+              disabled={!isSeated}
+              className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Enter Table
             </button>
             <button
               onClick={start}
-              disabled={loading}
-              className="px-3 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-sm font-semibold"
+              disabled={loading || !canStart}
+              className="px-3 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Start
             </button>
@@ -180,23 +197,41 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
           <div>Reconnect Grace: {room?.config.reconnectGraceSeconds ?? 0}s</div>
           <div>Rebuy: {room?.config.rebuyAmount ?? 0} BB</div>
         </div>
+        {!canStart && (
+          <div className="mt-2 text-xs text-amber-300">
+            Need {neededPlayers} more player{neededPlayers === 1 ? "" : "s"} seated to start a hand.
+          </div>
+        )}
 
         <div className="mt-4">
           <div className="text-sm font-semibold mb-1">Seats</div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            {room?.seats.map((s, i) => (
-              <div key={i} className="p-2 rounded bg-slate-700/50 border border-slate-700">
-                <div className="font-semibold">{s.username}</div>
-                <div className="text-xs text-slate-400">
-                  Stack: {s.stack} / Seat: {s.seatIndex}
+            {Array.from({ length: maxSeats }).map((_, idx) => {
+              const seat = room?.seats?.find((s) => s.seatIndex === idx);
+              return (
+                <div
+                  key={idx}
+                  className="p-2 rounded bg-slate-700/50 border border-slate-700 flex justify-between items-center"
+                >
+                  <div>
+                    <div className="font-semibold">
+                      {seat ? seat.username : `Empty Seat ${idx}`}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      Stack: {seat?.stack ?? 0} / Seat: {idx}
+                    </div>
+                  </div>
+                  {!seat && (
+                    <div className="text-[10px] text-slate-500 italic">waiting...</div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {game && (
+      {game ? (
         <div className="w-full max-w-4xl bg-slate-800/50 rounded-lg border border-slate-700 p-4">
             <div className="text-sm font-semibold mb-2">In Hand</div>
             <div className="text-xs text-slate-300">
@@ -299,7 +334,69 @@ export default function RoomDetailView({ apiBase, roomId, onBack }: Props) {
             )}
           </div>
         </div>
+      ) : (
+        <div className="w-full max-w-5xl bg-slate-800/30 rounded-lg border border-slate-700 p-4">
+          <div className="text-sm font-semibold mb-2">Waiting for players</div>
+          <div className="text-xs text-amber-300 mb-3">
+            Need {neededPlayers} more player{neededPlayers === 1 ? "" : "s"} seated to start a hand.
+          </div>
+          <WaitingTable
+            seats={room?.seats ?? []}
+            maxSeats={maxSeats}
+            heroSeatIndex={heroSeatIndex}
+          />
+        </div>
       )}
+    </div>
+  );
+}
+
+type WaitingTableProps = {
+  seats: { seatIndex: number; username: string; stack: number }[];
+  maxSeats: number;
+  heroSeatIndex: number;
+};
+
+function WaitingTable({ seats, maxSeats, heroSeatIndex }: WaitingTableProps) {
+  // seat 0: bottom, 1: right, 2: top, 3: left
+  const positions = [
+    { label: "You", className: "absolute bottom-4 left-1/2 -translate-x-1/2" },
+    { label: "BTN", className: "absolute top-1/2 right-4 -translate-y-1/2" },
+    { label: "CO", className: "absolute top-4 left-1/2 -translate-x-1/2" },
+    { label: "UTG", className: "absolute top-1/2 left-4 -translate-y-1/2" },
+  ];
+  return (
+    <div className="relative w-full max-w-5xl aspect-[16/9] bg-slate-800/40 border border-slate-700 rounded-lg overflow-hidden">
+      <div className="absolute inset-1/4 bg-emerald-900/50 border border-emerald-700 rounded-lg flex items-center justify-center text-emerald-100 text-sm">
+        Waiting for more players...
+      </div>
+      {Array.from({ length: maxSeats }).map((_, idx) => {
+        const pos = positions[idx] ?? { label: `Seat ${idx}`, className: "absolute" };
+        const seat = seats.find((s) => s.seatIndex === idx);
+        const occupied = !!seat;
+        const isHero = idx === heroSeatIndex;
+        return (
+          <div
+            key={idx}
+            className={`${pos.className} flex flex-col items-center gap-1`}
+          >
+            <div
+              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                occupied ? "bg-slate-700 text-slate-100" : "bg-slate-700/40 text-slate-400"
+              }`}
+            >
+              {occupied ? seat?.username : pos.label}
+            </div>
+            <div
+              className={`w-20 h-28 rounded-xl border ${
+                occupied
+                  ? "border-slate-600 bg-slate-700/60"
+                  : "border-slate-700 bg-slate-800/40"
+              } ${isHero ? "ring-2 ring-emerald-400/60" : ""}`}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -329,4 +426,3 @@ function getActionContext(table: any, heroSeatIndex: number) {
 
   return { toCall, minBetTotal, minRaiseTotal, maxTotal, legal };
 }
-

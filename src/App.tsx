@@ -41,6 +41,7 @@ import ReplayView from "./views/ReplayView.js";
 import LogoutConfirmView from "./views/LogoutConfirmView.js";
 import RoomListView from "./views/RoomListView.js";
 import RoomDetailView from "./views/RoomDetailView.js";
+import RoomGameView from "./views/RoomGameView.js";
 
 const HERO_INDEX = 2 as const;
 const PLAYER_COUNT = 4;
@@ -102,7 +103,8 @@ function App() {
     | "resetForm"
     | "logoutConfirm"
     | "roomList"
-    | "roomDetail";
+    | "roomDetail"
+    | "roomGame";
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("top");
   const [table, setTable] = useState<TableState | null>(null);
@@ -476,6 +478,17 @@ const visibleBoard = useMemo<CardType[]>(() => {
         apiBase={import.meta.env.VITE_API_BASE ?? ""}
         roomId={selectedRoomId}
         onBack={() => setView("roomList")}
+        onEnterTable={() => setView("roomGame")}
+      />
+    );
+  }
+
+  if (view === "roomGame" && selectedRoomId) {
+    return (
+      <RoomGameView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        roomId={selectedRoomId}
+        onBack={() => setView("roomDetail")}
       />
     );
   }
