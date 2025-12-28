@@ -39,6 +39,8 @@ import ResetRequestView from "./views/ResetRequestView";
 import ResetFormView from "./views/ResetFormView";
 import ReplayView from "./views/ReplayView";
 import LogoutConfirmView from "./views/LogoutConfirmView";
+import RoomListView from "./views/RoomListView";
+import RoomDetailView from "./views/RoomDetailView";
 
 const HERO_INDEX = 2 as const;
 const PLAYER_COUNT = 4;
@@ -98,7 +100,10 @@ function App() {
     | "username"
     | "resetRequest"
     | "resetForm"
-    | "logoutConfirm";
+    | "logoutConfirm"
+    | "roomList"
+    | "roomDetail";
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("top");
   const [table, setTable] = useState<TableState | null>(null);
   const [devShowAll, setDevShowAll] = useState(false);
@@ -447,6 +452,30 @@ const visibleBoard = useMemo<CardType[]>(() => {
         onLogoutRequest={() => setView("logoutConfirm")}
         isLoggedIn={isLoggedIn}
         username={auth.user?.username}
+        onRooms={() => setView("roomList")}
+      />
+    );
+  }
+
+  if (view === "roomList") {
+    return (
+      <RoomListView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        onSelect={(id) => {
+          setSelectedRoomId(id);
+          setView("roomDetail");
+        }}
+        onBack={() => setView("top")}
+      />
+    );
+  }
+
+  if (view === "roomDetail" && selectedRoomId) {
+    return (
+      <RoomDetailView
+        apiBase={import.meta.env.VITE_API_BASE ?? ""}
+        roomId={selectedRoomId}
+        onBack={() => setView("roomList")}
       />
     );
   }
