@@ -25,9 +25,18 @@ function TopView({
           {isLoggedIn ? `Welcome, ${username ?? ""}!` : "Guest"}
         </p>
       </div>
+      {/* Online Rooms を最上段＆強調 */}
+      {onRooms && (
+        <button
+          onClick={onRooms}
+          className="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-lg font-semibold shadow-lg transition-colors"
+        >
+          Online Rooms
+        </button>
+      )}
       <button
         onClick={onStart}
-        className="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-lg font-semibold shadow-lg transition-colors"
+        className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
       >
         Start Hands
       </button>
@@ -37,14 +46,6 @@ function TopView({
       >
         View Hands
       </button>
-      {onRooms && (
-        <button
-          onClick={onRooms}
-          className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
-        >
-          Online Rooms
-        </button>
-      )}
       {isLoggedIn ? (
         <button
           onClick={onLogoutRequest}
