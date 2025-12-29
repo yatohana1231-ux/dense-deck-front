@@ -59,6 +59,18 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
   const seatCount = room?.seats?.length ?? 0;
   const neededPlayers = Math.max(0, 2 - seatCount);
 
+  // ストリートが進むたびにベット欄をミニマムにリセット
+  useEffect(() => {
+    if (!table) return;
+    const ac = getActionContext(table, heroSeatIndex);
+    if (!ac) return;
+    if (ac.minRaiseTotal !== undefined) {
+      setActionAmount(ac.minRaiseTotal);
+    } else if (ac.minBetTotal !== undefined) {
+      setActionAmount(ac.minBetTotal);
+    }
+  }, [table?.street, table?.revealStreet, heroSeatIndex, table]);
+
   // auto-start when enough players and no hand yet
   useEffect(() => {
     if (table) return;

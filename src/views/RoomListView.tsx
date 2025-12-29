@@ -16,6 +16,9 @@ export default function RoomListView({ apiBase, onSelect, onJoin, onBack }: Prop
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pwRoomId, setPwRoomId] = useState<string | null>(null);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
 
   useEffect(() => {
     const ws = connectRoomListWs(apiBase, (msg: WsMessage) => {
@@ -69,6 +72,28 @@ export default function RoomListView({ apiBase, onSelect, onJoin, onBack }: Prop
       setError(e?.message ?? String(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const tryJoin = (room: RoomSummary) => {
+    if (room.hasPassword) {
+      setPwRoomId(room.id);
+      setPwInput("");
+      setPwError(null);
+      return;
+    }
+    joinRoom(room.id);
+  };
+
+  const submitPwJoin = async () => {
+    if (!pwRoomId) return;
+    setPwError(null);
+    try {
+      await joinRoom(pwRoomId, pwInput);
+      setPwRoomId(null);
+      setPwInput("");
+    } catch (e: any) {
+      setPwError(e?.message ?? String(e));
     }
   };
 
@@ -130,7 +155,7 @@ export default function RoomListView({ apiBase, onSelect, onJoin, onBack }: Prop
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  joinRoom(r.id);
+                  tryJoin(r);
                 }}
                 disabled={loading}
                 className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -144,6 +169,42 @@ export default function RoomListView({ apiBase, onSelect, onJoin, onBack }: Prop
           <div className="px-4 py-6 text-center text-slate-400">No rooms</div>
         )}
       </div>
+
+      {pwRoomId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 w-80 flex flex-col gap-3">
+            <div className="text-sm font-semibold">Enter room password</div>
+            <input
+              type="password"
+              value={pwInput}
+              onChange={(e) => setPwInput(e.target.value)}
+              className="px-3 py-2 rounded bg-slate-900 border border-slate-700 text-slate-100"
+              placeholder="Password"
+              autoFocus
+            />
+            {pwError && <div className="text-xs text-rose-400">{pwError}</div>}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => {
+                  setPwRoomId(null);
+                  setPwInput("");
+                  setPwError(null);
+                }}
+                className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitPwJoin}
+                disabled={loading}
+                className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
