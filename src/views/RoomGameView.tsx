@@ -36,6 +36,17 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
   const heroPlayer = table?.game?.players?.[heroSeatIndex];
   const isMyTurn = table?.currentPlayer === heroSeatIndex;
   const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
+  const visibleBoard = useMemo(() => {
+    if (!table) return [];
+    const street = table.revealStreet ?? table.street;
+    const flop = table.game?.flop ?? [];
+    const turn = table.game?.turn ? [table.game.turn] : [];
+    const river = table.game?.river ? [table.game.river] : [];
+    if (street === "preflop") return [];
+    if (street === "flop") return flop;
+    if (street === "turn") return [...flop, ...turn];
+    return [...flop, ...turn, ...river]; // river or showdown
+  }, [table]);
 
   // heartbeat
   useEffect(() => {
@@ -162,10 +173,7 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
           {table && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-full max-w-3xl">
-                <BoardArea
-                  cards={table ? table.game.flop.concat(table.game.turn, table.game.river) : []}
-                  pot={table?.game.pot ?? 0}
-                />
+                <BoardArea cards={visibleBoard} pot={table?.game.pot ?? 0} />
               </div>
             </div>
           )}
