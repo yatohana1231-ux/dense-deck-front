@@ -111,6 +111,10 @@ function App() {
         apiBase={import.meta.env.VITE_API_BASE ?? ""}
         roomId={selectedRoomId}
         onBack={() => setView("roomDetail")}
+        onRoomClosed={() => {
+          setSelectedRoomId(null);
+          setView("roomList");
+        }}
       />
     );
   }

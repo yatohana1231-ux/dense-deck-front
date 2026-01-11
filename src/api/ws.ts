@@ -23,6 +23,7 @@ export type WsMessage =
   | { type: "room"; room: RoomSummary }
   | { type: "game"; state: InHandState }
   | { type: "gameClear" }
+  | { type: "roomClosed"; message: string }
   | { type: "error"; message: string };
 
 export function connectRoomListWs(apiBase: string, onMessage: (msg: WsMessage) => void) {

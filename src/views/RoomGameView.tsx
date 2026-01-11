@@ -9,6 +9,7 @@ type Props = {
   apiBase: string;
   roomId: string;
   onBack: () => void;
+  onRoomClosed: () => void;
 };
 
 async function postJson(url: string, body: any) {
@@ -22,8 +23,8 @@ async function postJson(url: string, body: any) {
   return res.json();
 }
 
-export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
-  const { room, game, error: wsError } = useRoomState(apiBase, roomId);
+export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: Props) {
+  const { room, game, error: wsError, closedMessage } = useRoomState(apiBase, roomId);
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -137,6 +138,19 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
 
       {(error || wsError) && (
         <div className="w-full max-w-5xl text-sm text-rose-400">{error ?? wsError}</div>
+      )}
+      {closedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60">
+          <div className="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-800 p-5 text-center">
+            <div className="text-sm text-slate-100">{closedMessage}</div>
+            <button
+              onClick={onRoomClosed}
+              className="mt-4 px-4 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 p-4 relative overflow-hidden">
