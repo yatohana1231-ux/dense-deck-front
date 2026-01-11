@@ -64,11 +64,14 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
     if (!table) return;
     const ac = getActionContext(table, heroSeatIndex);
     if (!ac) return;
-    if (ac.minRaiseTotal !== undefined) {
-      setActionAmount(ac.minRaiseTotal);
-    } else if (ac.minBetTotal !== undefined) {
-      setActionAmount(ac.minBetTotal);
-    }
+    const desiredTotal =
+      table.street === "preflop"
+        ? 3
+        : Math.ceil((table.game?.pot ?? 0) * 0.5);
+    const minTotal =
+      table.game?.currentBet === 0 ? ac.minBetTotal ?? 1 : ac.minRaiseTotal ?? 1;
+    const clamped = Math.min(Math.max(desiredTotal, minTotal), ac.maxTotal);
+    setActionAmount(clamped);
   }, [table?.street, table?.revealStreet, heroSeatIndex, table]);
 
   // auto-start when enough players and no hand yet
