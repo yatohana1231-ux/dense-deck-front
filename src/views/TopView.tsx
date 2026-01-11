@@ -1,5 +1,4 @@
 type Props = {
-  onStart: () => void;
   onViewHands: () => void;
   onLogin: () => void;
   onLogoutRequest: () => void;
@@ -9,7 +8,6 @@ type Props = {
 };
 
 function TopView({
-  onStart,
   onViewHands,
   onLogin,
   onLogoutRequest,
@@ -34,12 +32,6 @@ function TopView({
           Online Rooms
         </button>
       )}
-      <button
-        onClick={onStart}
-        className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
-      >
-        Start Hands
-      </button>
       <button
         onClick={onViewHands}
         className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
