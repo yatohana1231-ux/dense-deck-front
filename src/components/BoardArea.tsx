@@ -14,7 +14,7 @@ export default function BoardArea({ cards, pot }: BoardAreaProps) {
       </div>
       <div className="flex items-center justify-center h-20">
         {cards.length === 0 ? (
-          <span className="text-slate-200 text-sm">アクション後にボードをオープン</span>
+          <span className="text-slate-200 text-sm">Open the board after the action.</span>
         ) : (
           <div className="flex gap-2">
             {cards.map((c, idx) => (
