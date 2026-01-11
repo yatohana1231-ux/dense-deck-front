@@ -30,6 +30,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const [loading, setLoading] = useState(false);
   const [actionAmount, setActionAmount] = useState(0);
   const [startSent, setStartSent] = useState(false);
+  const [clockTick, setClockTick] = useState(0);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -37,6 +38,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const heroPlayer = table?.game?.players?.[heroSeatIndex];
   const isMyTurn = table?.currentPlayer === heroSeatIndex;
   const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
+  const actionDeadline = game?.actionDeadline ?? null;
   const visibleBoard = useMemo(() => {
     if (!table) return [];
     const street = table.revealStreet ?? table.street;
@@ -74,6 +76,24 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     const clamped = Math.min(Math.max(desiredTotal, minTotal), ac.maxTotal);
     setActionAmount(clamped);
   }, [table?.street, table?.revealStreet, heroSeatIndex, table]);
+
+  useEffect(() => {
+    if (!isMyTurn || !actionDeadline) {
+      setClockTick(0);
+      return undefined;
+    }
+    const id = window.setInterval(() => {
+      setClockTick(Date.now());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isMyTurn, actionDeadline]);
+
+  const clockSeconds = useMemo(() => {
+    if (!actionDeadline) return 60;
+    if (!isMyTurn) return 60;
+    const remainingMs = Math.max(0, actionDeadline - Date.now());
+    return Math.ceil(remainingMs / 1000);
+  }, [actionDeadline, isMyTurn, clockTick]);
 
   // auto-start when enough players and no hand yet
   useEffect(() => {
@@ -217,7 +237,16 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
 
       {table && (
         <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 p-4">
-          <div className="text-sm font-semibold mb-2">Send Action</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-semibold">Send Action</div>
+            <div
+              className={`text-sm font-semibold ${
+                isMyTurn ? "text-emerald-300" : "text-slate-500"
+              }`}
+            >
+              Clock: {clockSeconds}s
+            </div>
+          </div>
           <RoomActionBar
             currentPlayer={table.currentPlayer ?? 0}
             legal={actionCtx?.legal ?? []}
