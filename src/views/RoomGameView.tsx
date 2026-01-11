@@ -39,7 +39,6 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const heroPlayer = table?.game?.players?.[heroSeatIndex];
   const isMyTurn = table?.currentPlayer === heroSeatIndex;
   const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
-  const actionDeadline = game?.actionDeadline ?? null;
   const actionSeconds = room?.config?.actionSeconds ?? 60;
   const visibleBoard = useMemo(() => {
     if (!table) return [];
