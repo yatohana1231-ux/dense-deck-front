@@ -31,6 +31,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const [actionAmount, setActionAmount] = useState(0);
   const [startSent, setStartSent] = useState(false);
   const [clockTick, setClockTick] = useState(0);
+  const [turnStartMs, setTurnStartMs] = useState<number | null>(null);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -39,6 +40,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const isMyTurn = table?.currentPlayer === heroSeatIndex;
   const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
   const actionDeadline = game?.actionDeadline ?? null;
+  const actionSeconds = room?.config?.actionSeconds ?? 60;
   const visibleBoard = useMemo(() => {
     if (!table) return [];
     const street = table.revealStreet ?? table.street;
@@ -78,22 +80,24 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   }, [table?.street, table?.revealStreet, heroSeatIndex, table]);
 
   useEffect(() => {
-    if (!isMyTurn || !actionDeadline) {
+    if (!isMyTurn) {
+      setTurnStartMs(null);
       setClockTick(0);
       return undefined;
     }
+    setTurnStartMs(Date.now());
     const id = window.setInterval(() => {
       setClockTick(Date.now());
     }, 1000);
     return () => window.clearInterval(id);
-  }, [isMyTurn, actionDeadline]);
+  }, [isMyTurn]);
 
   const clockSeconds = useMemo(() => {
-    if (!actionDeadline) return 60;
-    if (!isMyTurn) return 60;
-    const remainingMs = Math.max(0, actionDeadline - Date.now());
-    return Math.ceil(remainingMs / 1000);
-  }, [actionDeadline, isMyTurn, clockTick]);
+    if (!isMyTurn) return actionSeconds;
+    if (!turnStartMs) return actionSeconds;
+    const elapsedSec = Math.floor((clockTick - turnStartMs) / 1000);
+    return Math.max(0, actionSeconds - elapsedSec);
+  }, [actionSeconds, clockTick, isMyTurn, turnStartMs]);
 
   // auto-start when enough players and no hand yet
   useEffect(() => {
