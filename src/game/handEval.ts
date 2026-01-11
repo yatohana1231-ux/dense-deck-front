@@ -15,7 +15,7 @@ export type HandCategory =
 export const HAND_CATEGORY_LABEL: Record<HandCategory, string> = {
   "high-card": "ハイカード",
   "one-pair": "ワンペア",
-  "two-pair": "チE�Eペア",
+  "two-pair": "ツーペア",
   "three-of-a-kind": "スリーカード",
   "straight": "ストレート",
   "flush": "フラッシュ",
