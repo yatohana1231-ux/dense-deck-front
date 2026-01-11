@@ -86,6 +86,7 @@ export function useHandHistory(
         `${apiBase}/api/history?limit=${limit}&page=${page}`,
         {
           credentials: "include",
+          cache: "no-store",
         }
       );
       if (!res.ok) {
