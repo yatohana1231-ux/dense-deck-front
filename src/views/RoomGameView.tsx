@@ -84,7 +84,9 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
       setClockTick(0);
       return undefined;
     }
-    setTurnStartMs(Date.now());
+    const now = Date.now();
+    setTurnStartMs(now);
+    setClockTick(now);
     const id = window.setInterval(() => {
       setClockTick(Date.now());
     }, 1000);
@@ -94,7 +96,8 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const clockSeconds = useMemo(() => {
     if (!isMyTurn) return actionSeconds;
     if (!turnStartMs) return actionSeconds;
-    const elapsedSec = Math.floor((clockTick - turnStartMs) / 1000);
+    const now = clockTick || Date.now();
+    const elapsedSec = Math.floor((now - turnStartMs) / 1000);
     return Math.max(0, actionSeconds - elapsedSec);
   }, [actionSeconds, clockTick, isMyTurn, turnStartMs]);
 
@@ -151,6 +154,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
               setError(e?.message ?? String(e));
               return;
             }
+            window.localStorage.removeItem("lastRoomId");
             onBack();
           }}
           className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-sm font-semibold"

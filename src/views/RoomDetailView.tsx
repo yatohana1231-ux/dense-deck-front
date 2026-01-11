@@ -40,6 +40,7 @@ export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }
     try {
       await postJson(`${apiBase}/api/rooms/${roomId}/join`, {});
       setError(null);
+      window.localStorage.setItem("lastRoomId", roomId);
       onEnterTable();
     } catch (e: any) {
       setError(e?.message ?? String(e));

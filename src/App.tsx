@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TopView from "./views/TopView.js";
 import HistoryView from "./views/HistoryView.js";
 import AccountView from "./views/AccountView.js";
@@ -39,6 +39,15 @@ function App() {
   const auth = useAuth();
   const authReady = auth.ready;
   const isLoggedIn = !!auth.user && !auth.user.isGuest;
+
+  useEffect(() => {
+    if (!authReady) return;
+    const lastRoomId = window.localStorage.getItem("lastRoomId");
+    if (lastRoomId) {
+      setSelectedRoomId(lastRoomId);
+      setView("roomGame");
+    }
+  }, [authReady]);
 
   const shouldLoadHistory = view === "history";
   const { history, refresh: refreshHistory } = useHandHistory(
@@ -87,6 +96,7 @@ function App() {
         }}
         onJoin={(id) => {
           setSelectedRoomId(id);
+          window.localStorage.setItem("lastRoomId", id);
           setView("roomGame");
         }}
         onBack={() => setView("top")}
@@ -113,6 +123,7 @@ function App() {
         onBack={() => setView("roomDetail")}
         onRoomClosed={() => {
           setSelectedRoomId(null);
+          window.localStorage.removeItem("lastRoomId");
           setView("roomList");
         }}
       />
