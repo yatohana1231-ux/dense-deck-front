@@ -371,36 +371,72 @@ const visibleBoard = useMemo<CardType[]>(() => {
     setPostStatus(null);
     try {
       const apiBase = import.meta.env.VITE_API_BASE ?? "";
-      const heroInitial = lastFinishedRecord.initialStacks[HERO_INDEX] ?? 0;
-      const heroFinal = lastFinishedRecord.finalStacks[HERO_INDEX] ?? 0;
-      const payload = {
-        board: lastFinishedRecord.board,
-        boardReserved:
-          lastFinishedRecord.boardReserved ?? table?.boardReserved ?? [],
-        holeCards: lastFinishedRecord.holeCards,
+      const seatCount =
+        lastFinishedRecord.seatCount ?? lastFinishedRecord.holeCards.length;
+      const boardCards = [
+        ...(lastFinishedRecord.board?.flop ?? []),
+        lastFinishedRecord.board?.turn,
+        lastFinishedRecord.board?.river,
+      ].filter(Boolean) as CardType[];
+      const foldByPlayer = new Map<number, string>();
+      lastFinishedRecord.actionLog.forEach((entry) => {
+        if (entry.kind !== "fold") return;
+        if (!foldByPlayer.has(entry.playerIndex)) {
+          foldByPlayer.set(entry.playerIndex, entry.street.toUpperCase());
+        }
+      });
+
+      const participants = Array.from({ length: seatCount }).map((_, idx) => {
+        const initialStack = lastFinishedRecord.initialStacks[idx] ?? 0;
+        const finalStack = lastFinishedRecord.finalStacks[idx] ?? 0;
+        return {
+          userId: idx === HERO_INDEX ? auth.user?.userId ?? null : null,
+          seat: idx,
+          role: "player",
+          joinedAtHandStart: true,
+          leftBeforeHandEnd: false,
+          holeCards: lastFinishedRecord.holeCards[idx] ?? [],
+          showedHoleCards:
+            lastFinishedRecord.streetEnded === "showdown" &&
+            !foldByPlayer.has(idx),
+          foldedStreet: foldByPlayer.get(idx) ?? null,
+          netResultBB: finalStack - initialStack,
+          startingStackBB: initialStack,
+          endingStackBB: finalStack,
+          isWinner: lastFinishedRecord.winners.includes(idx),
+        };
+      });
+
+      const body = {
+        roomId: null,
+        matchId: null,
+        handNoInMatch: null,
+        handStartedAt: new Date(lastFinishedRecord.startedAt).toISOString(),
+        mode: "superDense",
+        maxPlayers: seatCount,
+        buttonSeat: lastFinishedRecord.btnIndex,
+        sbSeat: -1,
+        bbSeat: (lastFinishedRecord.btnIndex + 1) % seatCount,
+        stakes: { sb: 0, bb: 1, ante: 0, isSingleBlind: true },
         initialStacks: lastFinishedRecord.initialStacks,
         finalStacks: lastFinishedRecord.finalStacks,
-        actionLog: lastFinishedRecord.actionLog,
-        winners: lastFinishedRecord.winners,
-        handValues: lastFinishedRecord.handValues,
-        seatCount: lastFinishedRecord.seatCount ?? lastFinishedRecord.holeCards.length,
-        btnIndex: lastFinishedRecord.btnIndex,
-        heroIndex: lastFinishedRecord.heroIndex,
-        streetEnded: lastFinishedRecord.streetEnded,
-        mode: "superDense",
-      };
-      const body = {
-        handId: lastFinishedRecord.handId,
-        tableId: "table-local",
-        playerId: "player-local",
-        mode: "superDense",
-        stakes: { sb: 0, bb: 1 },
-        heroSeat: HERO_INDEX,
-        heroNetResult: heroFinal - heroInitial,
-        winnerCount: lastFinishedRecord.winners.length,
-        autoWin: lastFinishedRecord.autoWin ?? false,
-        playedAt: new Date(lastFinishedRecord.startedAt).toISOString(),
-        payload,
+        boardCards,
+        actions: lastFinishedRecord.actionLog,
+        result: {
+          winners: lastFinishedRecord.winners,
+          handValues: lastFinishedRecord.handValues,
+          pot: lastFinishedRecord.pot,
+          autoWin: lastFinishedRecord.autoWin ?? null,
+          streetEnded: lastFinishedRecord.streetEnded,
+          heroIndex: lastFinishedRecord.heroIndex,
+        },
+        roomSnapshot: {
+          roomTag: "local",
+          hasPassword: false,
+          rule: "single-blind",
+          initialStackBB: INITIAL_STACK,
+        },
+        participants,
       };
       const res = await fetch(`${apiBase}/api/history`, {
         method: "POST",
@@ -412,7 +448,8 @@ const visibleBoard = useMemo<CardType[]>(() => {
         const text = await res.text().catch(() => "");
         throw new Error(text || `HTTP ${res.status}`);
       }
-      setPostedHandId(lastFinishedRecord.handId);
+      const saved = await res.json().catch(() => null);
+      setPostedHandId(saved?.handId ?? lastFinishedRecord.handId);
       setPostStatus("Saved hand to DB");
     } catch (e: any) {
       setPostStatus(`Save failed: ${e?.message ?? e}`);

@@ -18,8 +18,45 @@ const mergePayload = (item: any): HandRecord => {
       heroIndex: p.heroIndex ?? item.heroIndex,
       btnIndex: p.btnIndex ?? item.btnIndex,
       streetEnded: p.streetEnded ?? item.streetEnded,
+      autoWin: p.autoWin ?? item.autoWin,
+      startedAt: p.startedAt ?? item.startedAt,
     };
   }
+
+  if (Array.isArray(item.boardCards)) {
+    const cards = item.boardCards as any[];
+    const flop = cards.slice(0, 3);
+    const turn = cards[3];
+    const river = cards[4];
+    const participants = Array.isArray(item.participants) ? item.participants : [];
+    const seatCount = item.maxPlayers ?? participants.length;
+    const holeCards = Array.from({ length: seatCount }).map((_, idx) => {
+      const p = participants.find((pp: any) => pp.seat === idx);
+      return p?.holeCards ?? [];
+    });
+
+    return {
+      handId: item.handId,
+      startedAt: item.handStartedAt
+        ? new Date(item.handStartedAt).getTime()
+        : Date.now(),
+      endedAt: item.playedAt ? new Date(item.playedAt).getTime() : Date.now(),
+      btnIndex: item.buttonSeat ?? 0,
+      heroIndex: item.result?.heroIndex ?? 2,
+      streetEnded: item.result?.streetEnded ?? "showdown",
+      autoWin: item.result?.autoWin ?? null,
+      board: { flop, turn, river },
+      holeCards,
+      initialStacks: item.initialStacks ?? [],
+      finalStacks: item.finalStacks ?? [],
+      actionLog: item.actions ?? [],
+      winners: item.result?.winners ?? [],
+      handValues: item.result?.handValues ?? [],
+      seatCount,
+      pot: item.result?.pot ?? 0,
+    };
+  }
+
   return item as HandRecord;
 };
 
