@@ -40,6 +40,7 @@ export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }
     try {
       await postJson(`${apiBase}/api/rooms/${roomId}/join`, {});
       setError(null);
+      onEnterTable();
     } catch (e: any) {
       setError(e?.message ?? String(e));
     } finally {
@@ -113,13 +114,6 @@ export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }
               className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSeated ? "Joined" : "Join"}
-            </button>
-            <button
-              onClick={onEnterTable}
-              disabled={!isSeated}
-              className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Enter Table
             </button>
             <button
               onClick={start}

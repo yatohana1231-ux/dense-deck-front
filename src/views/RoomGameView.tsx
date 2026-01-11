@@ -186,10 +186,8 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
 
           {/* Board: only show when table exists */}
           {table && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full max-w-3xl">
-                <BoardArea cards={visibleBoard} pot={table?.game.pot ?? 0} />
-              </div>
+            <div className="absolute left-1/2 top-1/2 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex justify-center">
+              <BoardArea cards={visibleBoard} pot={table?.game.pot ?? 0} />
             </div>
           )}
         </div>
