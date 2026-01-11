@@ -15,6 +15,8 @@ export type HandRecord = {
     seat: number;
     userId?: string | null;
     username?: string | null;
+    showedHoleCards?: boolean | null;
+    foldedStreet?: string | null;
   }>;
   board: {
     flop: CardType[];

@@ -112,6 +112,15 @@ function ReplayView({ record, onBack }: Props) {
     });
     return map;
   }, [participants]);
+  const participantBySeat = useMemo(() => {
+    const map = new Map<number, (typeof participants)[number]>();
+    participants.forEach((p) => {
+      if (typeof p.seat === "number") {
+        map.set(p.seat, p);
+      }
+    });
+    return map;
+  }, [participants]);
   const heroName = nameBySeat.get(heroSeatIndex);
   const seatOrder = useMemo(() => {
     const base = Array.from({ length: seatCount }, (_, i) => i);
@@ -189,12 +198,27 @@ function ReplayView({ record, onBack }: Props) {
   useEffect(() => {
     if (!playing) return;
     if (step >= actionCount) return;
-    timerRef.current = window.setTimeout(() => {
-      const entry = record.actionLog[step];
-      setTable((prev) => applyLogEntry(prev, entry));
-      setLastAction({ playerIndex: entry.playerIndex, text: actionLabel(entry) });
-      setStep((s) => s + 1);
-    }, 1500);
+    const entry = record.actionLog[step];
+    const prev = record.actionLog[step - 1];
+    const streetChanged = step > 0 && prev && prev.street !== entry.street;
+
+    if (streetChanged) {
+      timerRef.current = window.setTimeout(() => {
+        setTable((prevTable) => ({ ...prevTable, street: entry.street }));
+        setLastAction(null);
+        timerRef.current = window.setTimeout(() => {
+          setTable((prevTable) => applyLogEntry(prevTable, entry));
+          setLastAction({ playerIndex: entry.playerIndex, text: actionLabel(entry) });
+          setStep((s) => s + 1);
+        }, 1000);
+      }, 1000);
+    } else {
+      timerRef.current = window.setTimeout(() => {
+        setTable((prevTable) => applyLogEntry(prevTable, entry));
+        setLastAction({ playerIndex: entry.playerIndex, text: actionLabel(entry) });
+        setStep((s) => s + 1);
+      }, 1000);
+    }
     return () => {
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
@@ -207,9 +231,9 @@ function ReplayView({ record, onBack }: Props) {
     if (step >= actionCount) {
       setPlaying(false);
       setLastAction(null);
-      setTable((prev) => ({ ...prev, street: "showdown" }));
+      setTable((prev) => ({ ...prev, street: record.streetEnded ?? "showdown" }));
     }
-  }, [step, actionCount]);
+  }, [step, actionCount, record.streetEnded]);
 
   const reset = () => {
     setTable(buildInitialTable(record));
@@ -277,6 +301,10 @@ function ReplayView({ record, onBack }: Props) {
             table.game.players[seatIdx] ??
             { hand: [], bet: 0, stack: 0, folded: false, allIn: false };
           const isHero = seatIdx === heroSeatIndex;
+          const participant = participantBySeat.get(seatIdx);
+          const shouldReveal =
+            isHero ||
+            (table.street === "showdown" && participant?.showedHoleCards === true);
           const label = isHero
             ? heroName
               ? `You (${heroName})`
@@ -300,7 +328,7 @@ function ReplayView({ record, onBack }: Props) {
                 isHero={isHero}
                 isWinner={!!showdown?.winners.includes(seatIdx)}
                 handDescription={getHandDescriptionMemo(seatIdx)}
-                showCards
+                showCards={shouldReveal}
                 isButton={table.btnIndex === seatIdx}
                 popupText={lastAction?.playerIndex === seatIdx ? lastAction.text : undefined}
                 isActive={isSeatActive(seatIdx)}

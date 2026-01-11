@@ -35,6 +35,7 @@ function App() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("top");
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const auth = useAuth();
   const authReady = auth.ready;
@@ -52,11 +53,19 @@ function App() {
   const shouldLoadHistory = view === "history";
   const { history, refresh: refreshHistory } = useHandHistory(
     shouldLoadHistory,
-    5,
-    auth.user?.userId
+    20,
+    auth.user?.userId,
+    historyPage
   );
 
+  useEffect(() => {
+    if (view === "history") {
+      refreshHistory();
+    }
+  }, [view, historyPage]);
+
   const handleViewHands = () => {
+    setHistoryPage(1);
     refreshHistory();
     setView("history");
   };
@@ -132,12 +141,17 @@ function App() {
   }
 
   if (view === "history") {
+    const hasNext = history.length === 20;
     return (
       <HistoryView
         history={history}
         username={auth.user?.username}
         onSelectHand={startReplay}
         onBack={() => setView("top")}
+        page={historyPage}
+        hasNext={hasNext}
+        onPrev={() => setHistoryPage((p) => Math.max(1, p - 1))}
+        onNext={() => setHistoryPage((p) => p + 1)}
       />
     );
   }

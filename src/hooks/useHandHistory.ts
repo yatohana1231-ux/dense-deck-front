@@ -53,6 +53,8 @@ const mergePayload = (item: any, heroUserId?: string): HandRecord => {
         seat: p.seat,
         userId: p.userId ?? null,
         username: p.username ?? null,
+        showedHoleCards: p.showedHoleCards ?? null,
+        foldedStreet: p.foldedStreet ?? null,
       })),
       board: { flop, turn, river },
       holeCards,
@@ -69,15 +71,23 @@ const mergePayload = (item: any, heroUserId?: string): HandRecord => {
   return item as HandRecord;
 };
 
-export function useHandHistory(shouldLoad: boolean, limit = 5, heroUserId?: string) {
+export function useHandHistory(
+  shouldLoad: boolean,
+  limit = 5,
+  heroUserId?: string,
+  page = 1
+) {
   const [history, setHistory] = useState<HandRecord[]>([]);
 
   const refresh = async () => {
     const apiBase = import.meta.env.VITE_API_BASE ?? "";
     try {
-      const res = await fetch(`${apiBase}/api/history?limit=${limit}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${apiBase}/api/history?limit=${limit}&page=${page}`,
+        {
+          credentials: "include",
+        }
+      );
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -95,7 +105,7 @@ export function useHandHistory(shouldLoad: boolean, limit = 5, heroUserId?: stri
       refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldLoad, limit]);
+  }, [shouldLoad, limit, page, heroUserId]);
 
   return { history, refresh };
 }
