@@ -7,8 +7,6 @@ import InfoBar from "../components/InfoBar.js";
 import { HAND_CATEGORY_LABEL, compareHandValues, evaluateBestOfSeven } from "../game/handEval.js";
 import type { Card as CardType } from "../components/cards.js";
 
-const HERO_INDEX = 2;
-
 type Props = {
   record: HandRecord;
   onBack: () => void;
@@ -102,6 +100,29 @@ function ReplayView({ record, onBack }: Props) {
   const [playing, setPlaying] = useState(true);
   const timerRef = useRef<number | null>(null);
   const [lastAction, setLastAction] = useState<{ playerIndex: number; text: string } | null>(null);
+  const heroSeatIndex = record.heroIndex ?? 0;
+  const seatCount = record.seatCount ?? record.holeCards.length;
+  const participants = record.participants ?? [];
+  const nameBySeat = useMemo(() => {
+    const map = new Map<number, string>();
+    participants.forEach((p) => {
+      if (typeof p.seat === "number" && p.username) {
+        map.set(p.seat, p.username);
+      }
+    });
+    return map;
+  }, [participants]);
+  const heroName = nameBySeat.get(heroSeatIndex);
+  const seatOrder = useMemo(() => {
+    const base = Array.from({ length: seatCount }, (_, i) => i);
+    if (heroSeatIndex < 0 || base.length === 0) return base;
+    const n = base.length;
+    const bottom = n - 1;
+    return base.map((_, i) => {
+      const src = (heroSeatIndex + (i - bottom) + n) % n;
+      return src;
+    });
+  }, [heroSeatIndex, seatCount]);
 
   const actionCount = record.actionLog.length;
 
@@ -251,65 +272,45 @@ function ReplayView({ record, onBack }: Props) {
       </div>
 
       <div className="w-full max-w-4xl mt-2 grid grid-cols-[1fr_3fr_1fr] grid-rows-[0.7fr_auto_0.7fr] gap-2 h-[280px] lg:h-[310px]">
-        <div className="row-start-1 col-start-2 flex items-center justify-center">
-          <Seat
-            label="P0"
-            hand={table.game.players[0]?.hand ?? []}
-            player={table.game.players[0] ?? { hand: [], bet: 0, stack: 0, folded: false, allIn: false }}
-            isWinner={!!showdown?.winners.includes(0)}
-            handDescription={getHandDescriptionMemo(0)}
-            showCards
-            isButton={table.btnIndex === 0}
-            popupText={lastAction?.playerIndex === 0 ? lastAction.text : undefined}
-            isActive={isSeatActive(0)}
-          />
-        </div>
+        {seatOrder.map((seatIdx, i) => {
+          const player =
+            table.game.players[seatIdx] ??
+            { hand: [], bet: 0, stack: 0, folded: false, allIn: false };
+          const isHero = seatIdx === heroSeatIndex;
+          const label = isHero
+            ? heroName
+              ? `You (${heroName})`
+              : "You"
+            : nameBySeat.get(seatIdx) ?? `P${seatIdx}`;
+          const posClass =
+            i === 0
+              ? "row-start-2 col-start-1 flex items-start justify-center mt-1"
+              : i === 1
+              ? "row-start-1 col-start-2 flex items-center justify-center"
+              : i === 2
+              ? "row-start-2 col-start-3 flex items-start justify-center mt-1"
+              : "row-start-3 col-start-2 flex flex-col items-center justify-center gap-3";
+
+          return (
+            <div key={seatIdx} className={posClass}>
+              <Seat
+                label={label}
+                hand={player.hand ?? []}
+                player={player}
+                isHero={isHero}
+                isWinner={!!showdown?.winners.includes(seatIdx)}
+                handDescription={getHandDescriptionMemo(seatIdx)}
+                showCards
+                isButton={table.btnIndex === seatIdx}
+                popupText={lastAction?.playerIndex === seatIdx ? lastAction.text : undefined}
+                isActive={isSeatActive(seatIdx)}
+              />
+            </div>
+          );
+        })}
 
         <div className="row-start-2 col-start-1 col-span-3 flex items-center justify-center">
           <BoardArea cards={visibleBoard} pot={table.game.pot} />
-        </div>
-
-        <div className="row-start-2 col-start-1 flex items-start justify-center mt-1">
-          <Seat
-            label="P3"
-            hand={table.game.players[3]?.hand ?? []}
-            player={table.game.players[3] ?? { hand: [], bet: 0, stack: 0, folded: false, allIn: false }}
-            isWinner={!!showdown?.winners.includes(3)}
-            handDescription={getHandDescriptionMemo(3)}
-            showCards
-            isButton={table.btnIndex === 3}
-            popupText={lastAction?.playerIndex === 3 ? lastAction.text : undefined}
-            isActive={isSeatActive(3)}
-          />
-        </div>
-
-        <div className="row-start-2 col-start-3 flex items-start justify-center mt-1">
-          <Seat
-            label="P1"
-            hand={table.game.players[1]?.hand ?? []}
-            player={table.game.players[1] ?? { hand: [], bet: 0, stack: 0, folded: false, allIn: false }}
-            isWinner={!!showdown?.winners.includes(1)}
-            handDescription={getHandDescriptionMemo(1)}
-            showCards
-            isButton={table.btnIndex === 1}
-            popupText={lastAction?.playerIndex === 1 ? lastAction.text : undefined}
-            isActive={isSeatActive(1)}
-          />
-        </div>
-
-        <div className="row-start-3 col-start-2 flex flex-col items-center justify-center gap-3">
-          <Seat
-            label="You"
-            hand={table.game.players[HERO_INDEX]?.hand ?? []}
-            player={table.game.players[HERO_INDEX] ?? { hand: [], bet: 0, stack: 0, folded: false, allIn: false }}
-            isHero
-            isWinner={!!showdown?.winners.includes(HERO_INDEX)}
-            handDescription={getHandDescriptionMemo(HERO_INDEX)}
-            showCards
-            isButton={table.btnIndex === HERO_INDEX}
-            popupText={lastAction?.playerIndex === HERO_INDEX ? lastAction.text : undefined}
-            isActive={isSeatActive(HERO_INDEX)}
-          />
         </div>
       </div>
     </div>

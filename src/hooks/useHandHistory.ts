@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { HandRecord } from "../game/history/recorder.js";
 
-const mergePayload = (item: any): HandRecord => {
+const mergePayload = (item: any, heroUserId?: string): HandRecord => {
   if (item.payload && typeof item.payload === "object") {
     const p = item.payload as any;
     return {
@@ -34,6 +34,10 @@ const mergePayload = (item: any): HandRecord => {
       const p = participants.find((pp: any) => pp.seat === idx);
       return p?.holeCards ?? [];
     });
+    const heroSeat =
+      heroUserId && participants.length > 0
+        ? participants.find((pp: any) => pp.userId === heroUserId)?.seat
+        : undefined;
 
     return {
       handId: item.handId,
@@ -42,9 +46,14 @@ const mergePayload = (item: any): HandRecord => {
         : Date.now(),
       endedAt: item.playedAt ? new Date(item.playedAt).getTime() : Date.now(),
       btnIndex: item.buttonSeat ?? 0,
-      heroIndex: item.result?.heroIndex ?? 2,
+      heroIndex: heroSeat ?? item.result?.heroIndex ?? 2,
       streetEnded: item.result?.streetEnded ?? "showdown",
       autoWin: item.result?.autoWin ?? null,
+      participants: participants.map((p: any) => ({
+        seat: p.seat,
+        userId: p.userId ?? null,
+        username: p.username ?? null,
+      })),
       board: { flop, turn, river },
       holeCards,
       initialStacks: item.initialStacks ?? [],
@@ -60,7 +69,7 @@ const mergePayload = (item: any): HandRecord => {
   return item as HandRecord;
 };
 
-export function useHandHistory(shouldLoad: boolean, limit = 5) {
+export function useHandHistory(shouldLoad: boolean, limit = 5, heroUserId?: string) {
   const [history, setHistory] = useState<HandRecord[]>([]);
 
   const refresh = async () => {
@@ -73,7 +82,7 @@ export function useHandHistory(shouldLoad: boolean, limit = 5) {
         throw new Error(`HTTP ${res.status}`);
       }
       const data = (await res.json()) as any[];
-      const mapped = data.map(mergePayload);
+      const mapped = data.map((item) => mergePayload(item, heroUserId));
       setHistory(mapped);
     } catch (e) {
       console.warn("Failed to load hand history from API", e);

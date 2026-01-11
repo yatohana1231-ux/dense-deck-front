@@ -52,7 +52,8 @@ function App() {
   const shouldLoadHistory = view === "history";
   const { history, refresh: refreshHistory } = useHandHistory(
     shouldLoadHistory,
-    5
+    5,
+    auth.user?.userId
   );
 
   const handleViewHands = () => {

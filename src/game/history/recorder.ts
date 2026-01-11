@@ -11,6 +11,11 @@ export type HandRecord = {
   heroIndex: number;
   streetEnded: Street;
   autoWin: number | null;
+  participants?: Array<{
+    seat: number;
+    userId?: string | null;
+    username?: string | null;
+  }>;
   board: {
     flop: CardType[];
     turn: CardType;
