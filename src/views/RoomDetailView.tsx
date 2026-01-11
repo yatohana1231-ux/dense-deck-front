@@ -48,19 +48,6 @@ export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }
     }
   };
 
-  const leave = async () => {
-    setLoading(true);
-    try {
-      await postJson(`${apiBase}/api/rooms/${roomId}/leave`, {});
-      setError(null);
-      onBack();
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const start = async () => {
     setLoading(true);
     try {
@@ -86,13 +73,6 @@ export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }
             className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
           >
             Back
-          </button>
-          <button
-            onClick={leave}
-            disabled={loading}
-            className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-sm font-semibold"
-          >
-            Leave
           </button>
         </div>
       </div>

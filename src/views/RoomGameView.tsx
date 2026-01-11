@@ -120,10 +120,18 @@ export default function RoomGameView({ apiBase, roomId, onBack }: Props) {
       <div className="w-full max-w-5xl flex items-center justify-between">
         <h1 className="text-2xl font-bold">Online Table</h1>
         <button
-          onClick={onBack}
-          className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+          onClick={async () => {
+            try {
+              await postJson(`${apiBase}/api/rooms/${roomId}/leave`, {});
+            } catch (e: any) {
+              setError(e?.message ?? String(e));
+              return;
+            }
+            onBack();
+          }}
+          className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-sm font-semibold"
         >
-          Back
+          Leave
         </button>
       </div>
 
