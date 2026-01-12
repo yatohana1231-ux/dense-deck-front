@@ -4,13 +4,14 @@ import Seat from "../components/Seat.js";
 import RoomActionBar from "../components/RoomActionBar.js";
 import { useRoomState } from "../hooks/useRoomState.js";
 import { useAuth } from "../hooks/useAuth.js";
-import type { ActionLogEntry, PlayerState } from "../game/table.js";
 import type { Street } from "../game/types.js";
 import {
-  HAND_CATEGORY_LABEL,
-  compareHandValues,
-  evaluateBestOfSeven,
-} from "../game/handEval.js";
+  actionLabel,
+  computeShowdownInfo,
+  getHandDescription,
+  isShowdownStreet,
+  PRESENTATION_DELAYS,
+} from "../game/presentation/timeline.js";
 
 type Props = {
   apiBase: string;
@@ -48,6 +49,8 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const showdownRevealRef = useRef<number | null>(null);
   const showdownResultRef = useRef<number | null>(null);
   const showdownHandRef = useRef<string | null>(null);
+  const nextHandTimerRef = useRef<number | null>(null);
+  const nextHandForRef = useRef<string | null>(null);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -90,7 +93,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     turnDelayRef.current = window.setTimeout(() => {
       setDisplayCurrentPlayer(next);
       turnDelayRef.current = null;
-    }, 1000);
+    }, PRESENTATION_DELAYS.actionMs);
     return () => {
       if (turnDelayRef.current !== null) {
         window.clearTimeout(turnDelayRef.current);
@@ -127,7 +130,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     streetDelayRef.current = window.setTimeout(() => {
       setDisplayStreet(nextStreet);
       streetDelayRef.current = null;
-    }, 1000);
+    }, PRESENTATION_DELAYS.boardMs);
     return () => {
       if (streetDelayRef.current !== null) {
         window.clearTimeout(streetDelayRef.current);
@@ -141,49 +144,13 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     return log.length > 0 ? log[log.length - 1] : null;
   }, [table?.actionLog]);
 
-  const isShowdown =
-    table?.street === "showdown" || table?.revealStreet === "showdown";
+  const isShowdown = isShowdownStreet(table);
 
   const showdownInfo = useMemo(() => {
     if (!table || !isShowdown) {
-      return {
-        winners: [] as number[],
-        values: [] as (ReturnType<typeof evaluateBestOfSeven> | null)[],
-      };
+      return { winners: [], values: [] };
     }
-    if (table.autoWin !== null) {
-      return {
-        winners: [table.autoWin],
-        values: Array(table.game.players.length).fill(null),
-      };
-    }
-    const board = [...table.game.flop, table.game.turn, table.game.river];
-    if (board.length < 5) {
-      return {
-        winners: [] as number[],
-        values: [] as (ReturnType<typeof evaluateBestOfSeven> | null)[],
-      };
-    }
-    let best: ReturnType<typeof evaluateBestOfSeven> | null = null;
-    let winners: number[] = [];
-    const values = table.game.players.map((p: PlayerState, idx: number) => {
-      if (p.folded) return null;
-      const v = evaluateBestOfSeven(p.hand, board);
-      if (!best) {
-        best = v;
-        winners = [idx];
-      } else {
-        const cmp = compareHandValues(v, best);
-        if (cmp > 0) {
-          best = v;
-          winners = [idx];
-        } else if (cmp === 0) {
-          winners.push(idx);
-        }
-      }
-      return v;
-    });
-    return { winners, values };
+    return computeShowdownInfo(table);
   }, [table, isShowdown]);
 
   useEffect(() => {
@@ -214,11 +181,11 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     showdownRevealRef.current = window.setTimeout(() => {
       setShowdownReveal(true);
       showdownRevealRef.current = null;
-    }, 1000);
+    }, PRESENTATION_DELAYS.showdownRevealMs);
     showdownResultRef.current = window.setTimeout(() => {
       setShowdownResult(true);
       showdownResultRef.current = null;
-    }, 2000);
+    }, PRESENTATION_DELAYS.showdownRevealMs + PRESENTATION_DELAYS.showdownResultMs);
     return () => {
       if (showdownRevealRef.current !== null) {
         window.clearTimeout(showdownRevealRef.current);
@@ -289,6 +256,37 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     postJson(`${apiBase}/api/rooms/${roomId}/start`, {}).catch(() => setStartSent(false));
   }, [table, neededPlayers, apiBase, roomId, startSent]);
 
+  // next hand: trigger start request after result popup
+  useEffect(() => {
+    if (!table || !game?.handEnded) {
+      nextHandForRef.current = null;
+      if (nextHandTimerRef.current !== null) {
+        window.clearTimeout(nextHandTimerRef.current);
+        nextHandTimerRef.current = null;
+      }
+      return;
+    }
+    if (neededPlayers > 0) return;
+    if (nextHandForRef.current === table.handId) return;
+    if (isShowdown && !showdownResult) return;
+    nextHandForRef.current = table.handId;
+    if (nextHandTimerRef.current !== null) {
+      window.clearTimeout(nextHandTimerRef.current);
+    }
+    nextHandTimerRef.current = window.setTimeout(() => {
+      postJson(`${apiBase}/api/rooms/${roomId}/start`, {}).catch(() => {
+        nextHandForRef.current = null;
+      });
+      nextHandTimerRef.current = null;
+    }, 2000);
+    return () => {
+      if (nextHandTimerRef.current !== null) {
+        window.clearTimeout(nextHandTimerRef.current);
+        nextHandTimerRef.current = null;
+      }
+    };
+  }, [table, game?.handEnded, isShowdown, showdownResult, neededPlayers, apiBase, roomId]);
+
   const sendAction = async (kind: string) => {
     if (heroSeatIndex < 0) {
       setError("You are not seated in this room.");
@@ -321,23 +319,6 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     });
   }, [maxSeats, heroSeatIndex]);
 
-  const getHandDescription = (
-    v?: ReturnType<typeof evaluateBestOfSeven> | null
-  ) => {
-    if (!v) return "";
-    const base = HAND_CATEGORY_LABEL[v.category];
-    switch (v.category) {
-      case "one-pair":
-        return `${base} ${v.ranks[0]}`;
-      case "two-pair":
-        return v.ranks.length >= 2 ? `${base} ${v.ranks[0]} and ${v.ranks[1]}` : base;
-      case "three-of-a-kind":
-      case "four-of-a-kind":
-        return `${base} ${v.ranks[0]}`;
-      default:
-        return base;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
@@ -486,24 +467,6 @@ function positionLabel(playerIndex: number, btnIndex: number) {
   if (playerIndex === (btnIndex + 1) % n) return "BB";
   if (playerIndex === (btnIndex + 2) % n) return "UTG";
   return "CO";
-}
-
-function actionLabel(entry: ActionLogEntry) {
-  const amt = entry.amount ?? 0;
-  switch (entry.kind) {
-    case "fold":
-      return "Fold";
-    case "check":
-      return "Check";
-    case "call":
-      return amt > 0 ? `Call ${amt}BB` : "Call";
-    case "bet":
-      return amt > 0 ? `Bet ${amt}BB` : "Bet";
-    case "raise":
-      return amt > 0 ? `Raise ${amt}BB` : "Raise";
-    default:
-      return entry.kind;
-  }
 }
 
 function getActionContext(table: any, heroSeatIndex: number) {

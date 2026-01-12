@@ -4,8 +4,13 @@ import type { TableState, ActionLogEntry, PlayerState, Street } from "../game/ta
 import Seat from "../components/Seat.js";
 import BoardArea from "../components/BoardArea.js";
 import InfoBar from "../components/InfoBar.js";
-import { HAND_CATEGORY_LABEL, compareHandValues, evaluateBestOfSeven } from "../game/handEval.js";
 import type { Card as CardType } from "../components/cards.js";
+import {
+  actionLabel,
+  computeShowdownInfo,
+  getHandDescription,
+  PRESENTATION_DELAYS,
+} from "../game/presentation/timeline.js";
 
 type Props = {
   record: HandRecord;
@@ -78,22 +83,6 @@ function applyLogEntry(table: TableState, entry: ActionLogEntry): TableState {
   };
 }
 
-function getHandDescription(v?: ReturnType<typeof evaluateBestOfSeven>): string | undefined {
-  if (!v) return undefined;
-  const base = HAND_CATEGORY_LABEL[v.category];
-  switch (v.category) {
-    case "one-pair":
-      return `${base} ${v.ranks[0]}`;
-    case "two-pair":
-      return v.ranks.length >= 2 ? `${base} ${v.ranks[0]} and ${v.ranks[1]}` : base;
-    case "three-of-a-kind":
-    case "four-of-a-kind":
-      return `${base} ${v.ranks[0]}`;
-    default:
-      return base;
-  }
-}
-
 function ReplayView({ record, onBack }: Props) {
   const [table, setTable] = useState<TableState>(() => buildInitialTable(record));
   const [step, setStep] = useState(0);
@@ -144,56 +133,9 @@ function ReplayView({ record, onBack }: Props) {
   }, [table]);
 
   const showdown = useMemo(() => {
-    if (table.autoWin !== null) {
-      return {
-        winners: [table.autoWin],
-        values: Array(table.game.players.length).fill(null),
-      };
-    }
-    const fullBoard = [...table.game.flop, table.game.turn, table.game.river];
-    const values: (ReturnType<typeof evaluateBestOfSeven> | null)[] = [];
-    let best: ReturnType<typeof evaluateBestOfSeven> | null = null;
-    let winners: number[] = [];
-    table.game.players.forEach((p, idx) => {
-      if (p.folded) {
-        values.push(null);
-        return;
-      }
-      const v = evaluateBestOfSeven(p.hand, fullBoard);
-      values.push(v);
-      if (!best) {
-        best = v;
-        winners = [idx];
-      } else {
-        const cmp = compareHandValues(v, best);
-        if (cmp > 0) {
-          best = v;
-          winners = [idx];
-        } else if (cmp === 0) {
-          winners.push(idx);
-        }
-      }
-    });
-    return { winners, values };
+    if (!table) return { winners: [], values: [] };
+    return computeShowdownInfo(table);
   }, [table]);
-
-  const actionLabel = (entry: ActionLogEntry) => {
-    const amt = entry.amount ?? 0;
-    switch (entry.kind) {
-      case "fold":
-        return "Fold";
-      case "check":
-        return "Check";
-      case "call":
-        return amt > 0 ? `Call ${amt}BB` : "Call";
-      case "bet":
-        return amt > 0 ? `Bet ${amt}BB` : "Bet";
-      case "raise":
-        return amt > 0 ? `Raise ${amt}BB` : "Raise";
-      default:
-        return entry.kind;
-    }
-  };
 
   useEffect(() => {
     if (!playing) return;
@@ -210,14 +152,14 @@ function ReplayView({ record, onBack }: Props) {
           setTable((prevTable) => applyLogEntry(prevTable, entry));
           setLastAction({ playerIndex: entry.playerIndex, text: actionLabel(entry) });
           setStep((s) => s + 1);
-        }, 1000);
-      }, 1000);
+        }, PRESENTATION_DELAYS.actionMs);
+      }, PRESENTATION_DELAYS.boardMs);
     } else {
       timerRef.current = window.setTimeout(() => {
         setTable((prevTable) => applyLogEntry(prevTable, entry));
         setLastAction({ playerIndex: entry.playerIndex, text: actionLabel(entry) });
         setStep((s) => s + 1);
-      }, 1000);
+      }, PRESENTATION_DELAYS.actionMs);
     }
     return () => {
       if (timerRef.current !== null) {
