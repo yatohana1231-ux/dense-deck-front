@@ -46,6 +46,7 @@ export type TableState = {
   roundStarter: number;
   lastAggressor: number | null;
   lastRaise: number;
+  raiseBlocked: boolean;
   btnIndex: number;
   autoWin: number | null;
   revealStreet: Street;

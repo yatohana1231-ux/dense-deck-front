@@ -140,6 +140,7 @@ export async function createInitialTable(
     roundStarter: firstActor,
     lastAggressor: null,
     lastRaise: 1, // BB posted 1BB
+    raiseBlocked: false,
     btnIndex,
     autoWin: null,
     revealStreet: "preflop",
@@ -167,6 +168,7 @@ export function applyAction(
   let currentBet = game.currentBet;
   let lastAggressor = gameState.lastAggressor;
   let lastRaise = gameState.lastRaise ?? 1;
+  let raiseBlocked = gameState.raiseBlocked ?? false;
   let payAmount = 0;
 
   switch (kind) {
@@ -206,6 +208,7 @@ export function applyAction(
         pot += pay;
         currentBet = p.bet;
         lastRaise = currentBet;
+        raiseBlocked = false;
         if (p.stack === 0) p.allIn = true;
         lastAggressor = playerIndex;
       } else {
@@ -224,8 +227,10 @@ export function applyAction(
           lastRaise = raiseSize;
           currentBet = p.bet;
           lastAggressor = playerIndex;
+          raiseBlocked = false;
         } else {
           currentBet = Math.max(currentBet, p.bet);
+          raiseBlocked = true;
         }
         if (p.stack === 0) p.allIn = true;
       }
@@ -238,6 +243,7 @@ export function applyAction(
     game: { ...game, players, pot, currentBet },
     lastAggressor,
     lastRaise,
+    raiseBlocked,
     revealStreet: gameState.revealStreet,
     actionLog: [
       ...gameState.actionLog,
@@ -304,6 +310,14 @@ export function advanceAfterAction(state: TableState): TableState {
   const aggressorActed =
     lastAggressor !== null && currentPlayer === lastAggressor;
 
+  if (actionable.length <= 1 && everyoneMatchedOrAllIn) {
+    return { ...state, street: "showdown", revealStreet: "river" };
+  }
+
+  if (actionable.length === 0 && everyoneMatchedOrAllIn) {
+    return { ...state, street: "showdown", revealStreet: "river" };
+  }
+
   if (game.currentBet === 0) {
     if (cameFullCircleStarter) {
       const ns = nextStreet(street);
@@ -321,6 +335,7 @@ export function advanceAfterAction(state: TableState): TableState {
         roundStarter: firstActive,
         lastAggressor: null,
         lastRaise: 1,
+        raiseBlocked: false,
         revealStreet: ns,
         autoWin: null,
       };
@@ -349,6 +364,7 @@ export function advanceAfterAction(state: TableState): TableState {
       roundStarter: firstActive,
       lastAggressor: null,
       lastRaise: 1,
+      raiseBlocked: false,
       revealStreet: ns,
       autoWin: null,
     };

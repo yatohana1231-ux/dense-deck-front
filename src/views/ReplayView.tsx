@@ -43,6 +43,7 @@ function buildInitialTable(record: HandRecord): TableState {
     roundStarter: record.actionLog?.[0]?.playerIndex ?? 0,
     lastAggressor: null,
     lastRaise: 1,
+    raiseBlocked: false,
     revealStreet: "preflop",
     btnIndex: record.btnIndex ?? 0,
     autoWin: record.autoWin ?? null,
@@ -80,6 +81,7 @@ function applyLogEntry(table: TableState, entry: ActionLogEntry): TableState {
     revealStreet,
     currentPlayer: entry.playerIndex,
     actionLog: [...table.actionLog, entry],
+    raiseBlocked: table.raiseBlocked ?? false,
     pots: table.pots,
   };
 }
