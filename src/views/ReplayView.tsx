@@ -50,6 +50,7 @@ function buildInitialTable(record: HandRecord): TableState {
     handStartedAt: record.startedAt ?? Date.now(),
     initialStacks: record.initialStacks ?? Array(seatCount).fill(100),
     actionLog: [],
+    pots: [],
   };
 }
 
@@ -79,6 +80,7 @@ function applyLogEntry(table: TableState, entry: ActionLogEntry): TableState {
     revealStreet,
     currentPlayer: entry.playerIndex,
     actionLog: [...table.actionLog, entry],
+    pots: table.pots,
   };
 }
 
@@ -319,7 +321,7 @@ function ReplayView({ record, onBack }: Props) {
         })}
 
         <div className="row-start-2 col-start-1 col-span-3 flex items-center justify-center">
-          <BoardArea cards={visibleBoard} pot={table.game.pot} />
+          <BoardArea cards={visibleBoard} pot={table.game.pot} pots={table.pots} />
         </div>
       </div>
     </div>

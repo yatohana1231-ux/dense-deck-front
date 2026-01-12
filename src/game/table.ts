@@ -56,6 +56,34 @@ function findNextActiveInOrder(
   return current;
 }
 
+function computePots(players: PlayerState[], initialStacks: number[]) {
+  const contributions = players.map((p, i) => {
+    const initial = initialStacks[i] ?? 0;
+    return Math.max(0, initial - p.stack);
+  });
+  const levels = Array.from(new Set(contributions.filter((c) => c > 0))).sort(
+    (a, b) => a - b
+  );
+  let prev = 0;
+  const pots = [];
+  for (const level of levels) {
+    const contributors = contributions
+      .map((c, i) => (c >= level ? i : -1))
+      .filter((i) => i !== -1);
+    const amount = (level - prev) * contributors.length;
+    if (amount <= 0) {
+      prev = level;
+      continue;
+    }
+    const eligible = players
+      .map((p, i) => (!p.folded && contributions[i] >= level ? i : -1))
+      .filter((i) => i !== -1);
+    pots.push({ amount, eligible });
+    prev = level;
+  }
+  return pots;
+}
+
 export async function createInitialTable(
   playerCount: number,
   initialStack: number,
@@ -101,6 +129,8 @@ export async function createInitialTable(
     pot,
     currentBet,
   };
+  const initialStacks = Array(playerCount).fill(initialStack);
+  const pots = computePots(players, initialStacks);
 
   return {
     game,
@@ -115,8 +145,9 @@ export async function createInitialTable(
     revealStreet: "preflop",
     handId,
     handStartedAt: Date.now(),
-    initialStacks: Array(playerCount).fill(initialStack),
+    initialStacks,
     actionLog: [],
+    pots,
   };
 }
 
@@ -223,6 +254,7 @@ export function applyAction(
         timestamp: Date.now(),
       },
     ],
+    pots: computePots(players, gameState.initialStacks ?? []),
   };
 }
 
@@ -242,13 +274,7 @@ export function advanceAfterAction(state: TableState): TableState {
   }
 
   const activeNotFolded = players.filter((p) => !p.folded);
-
-  if (
-    activeNotFolded.length > 0 &&
-    activeNotFolded.every((p) => p.allIn)
-  ) {
-    return { ...state, street: "showdown" };
-  }
+  const actionable = activeNotFolded.filter((p) => !p.allIn);
 
   const activeIndices = players
     .map((p, i) => (!p.folded ? i : -1))
@@ -257,6 +283,14 @@ export function advanceAfterAction(state: TableState): TableState {
   if (activeIndices.length <= 1) {
     const winner = activeIndices[0] ?? 0;
     return { ...state, street: "showdown", autoWin: winner };
+  }
+
+  if (activeIndices.length >= 2 && actionable.length <= 1) {
+    return {
+      ...state,
+      street: "showdown",
+      revealStreet: "river",
+    };
   }
 
   const nextIndex = findNextActiveInOrder(actionOrder, players, currentPlayer);

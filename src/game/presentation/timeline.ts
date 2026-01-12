@@ -69,9 +69,37 @@ export function computeShowdownInfo(table: TableState): {
     };
   }
 
+  const values = table.game.players.map((p) => {
+    if (p.folded) return null;
+    return evaluateBestOfSeven(p.hand, board);
+  });
+
+  if (table.pots && table.pots.length > 0) {
+    const winnersSet = new Set<number>();
+    for (const pot of table.pots) {
+      const eligible = pot.eligible.filter((idx) => values[idx]);
+      if (eligible.length === 0) continue;
+      let best = values[eligible[0]]!;
+      let potWinners = [eligible[0]];
+      for (let i = 1; i < eligible.length; i++) {
+        const idx = eligible[i];
+        const v = values[idx]!;
+        const cmp = compareHandValues(v, best);
+        if (cmp > 0) {
+          best = v;
+          potWinners = [idx];
+        } else if (cmp === 0) {
+          potWinners.push(idx);
+        }
+      }
+      potWinners.forEach((idx) => winnersSet.add(idx));
+    }
+    return { winners: Array.from(winnersSet), values };
+  }
+
   let best: ReturnType<typeof evaluateBestOfSeven> | null = null;
   let winners: number[] = [];
-  const values = table.game.players.map((p, idx) => {
+  table.game.players.forEach((p, idx) => {
     if (p.folded) return null;
     const v = evaluateBestOfSeven(p.hand, board);
     if (!best) {
@@ -86,7 +114,6 @@ export function computeShowdownInfo(table: TableState): {
         winners.push(idx);
       }
     }
-    return v;
   });
 
   return { winners, values };

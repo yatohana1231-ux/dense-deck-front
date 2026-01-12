@@ -3,6 +3,11 @@ import type { Card as CardType } from "../components/cards.js";
 export type Street = "preflop" | "flop" | "turn" | "river" | "showdown";
 export type ActionKind = "fold" | "check" | "call" | "bet" | "raise";
 
+export type Pot = {
+  amount: number;
+  eligible: number[];
+};
+
 export type PlayerState = {
   hand: CardType[];
   stack: number;
@@ -48,6 +53,7 @@ export type TableState = {
   handStartedAt: number;
   initialStacks: number[];
   actionLog: ActionLogEntry[];
+  pots: Pot[];
 };
 
 export type PendingAction = {

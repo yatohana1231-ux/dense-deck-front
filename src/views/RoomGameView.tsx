@@ -126,10 +126,6 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
       return;
     }
     const nextStreet = (table.revealStreet ?? table.street) as Street;
-    if (!displayStreet) {
-      setDisplayStreet(nextStreet);
-      return;
-    }
     if (nextStreet === displayStreet) return;
     const currentIdx = streetOrder.indexOf(displayStreet);
     const nextIdx = streetOrder.indexOf(nextStreet);
@@ -137,11 +133,12 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
       setDisplayStreet(nextStreet);
       return;
     }
+    const stepStreet = streetOrder[currentIdx + 1] ?? nextStreet;
     if (streetDelayRef.current !== null) {
       window.clearTimeout(streetDelayRef.current);
     }
     streetDelayRef.current = window.setTimeout(() => {
-      setDisplayStreet(nextStreet);
+      setDisplayStreet(stepStreet);
       streetDelayRef.current = null;
     }, PRESENTATION_DELAYS.boardMs);
     return () => {
@@ -164,7 +161,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
       return { winners: [], values: [] };
     }
     return computeShowdownInfo(table);
-  }, [table, isShowdown]);
+  }, [table, isShowdown, displayStreet]);
 
   useEffect(() => {
     if (!table || !isShowdown) {
@@ -179,6 +176,9 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
         window.clearTimeout(showdownResultRef.current);
         showdownResultRef.current = null;
       }
+      return;
+    }
+    if (displayStreet !== "river") {
       return;
     }
     if (showdownHandRef.current === table.handId) return;
@@ -509,7 +509,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
           {/* Board: only show when table exists */}
           {table && (
             <div className="absolute left-1/2 top-1/2 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex justify-center">
-              <BoardArea cards={visibleBoard} pot={table?.game.pot ?? 0} />
+              <BoardArea cards={visibleBoard} pot={table?.game.pot ?? 0} pots={table?.pots} />
             </div>
           )}
         </div>
