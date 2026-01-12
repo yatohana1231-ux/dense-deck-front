@@ -40,7 +40,15 @@ export default function Seat({
       }`}
     >
       {displayPopup && (
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-sm px-4 py-1.5 rounded-full bg-sky-500/90 border border-sky-300/70 text-slate-900 whitespace-nowrap shadow-sm">
+        <div
+          className={`absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-sm px-4 py-1.5 rounded-full whitespace-nowrap shadow-sm ${
+            isWinner
+              ? "bg-emerald-400/95 border border-emerald-200 text-slate-900"
+              : player.folded
+              ? "bg-slate-600/80 border border-slate-500 text-slate-200"
+              : "bg-sky-500/90 border border-sky-300/70 text-slate-900"
+          }`}
+        >
           {displayPopup}
         </div>
       )}

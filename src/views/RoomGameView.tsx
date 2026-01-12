@@ -374,9 +374,15 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
               (seat ? { hand: [], bet: 0, stack: seat.stack, folded: false, allIn: false } : null);
             const showCards = seatIdx === heroSeatIndex || (isShowdown && showdownReveal);
             const isEmpty = !seat;
-            const resultPopup =
+            const isWinner =
               showdownResult && isShowdown && seat
                 ? showdownInfo.winners.includes(seatIdx)
+                : false;
+            const isLoser =
+              showdownResult && isShowdown && seat ? !isWinner : false;
+            const resultPopup =
+              showdownResult && isShowdown && seat
+                ? isWinner
                   ? `WIN ${getHandDescription(showdownInfo.values[seatIdx])}`
                   : "LOSE"
                 : undefined;
@@ -409,11 +415,15 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
                     label={positionLabel(seatIdx, table?.btnIndex ?? 0)}
                     hand={player.hand ?? []}
                     player={player}
-                    isWinner={false}
+                    isWinner={isWinner}
                     showCards={showCards}
                     isButton={table?.btnIndex === seatIdx}
                     popupText={popup}
-                    isActive={displayCurrentPlayer === seatIdx}
+                    isActive={
+                      showdownResult && isShowdown
+                        ? isWinner
+                        : displayCurrentPlayer === seatIdx
+                    }
                   />
                 ) : (
                   <div className="w-24 h-28 rounded-xl border border-slate-700 bg-slate-800/30" />

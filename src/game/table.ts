@@ -275,6 +275,8 @@ export function advanceAfterAction(state: TableState): TableState {
     lastAggressor === null ||
     players[lastAggressor]?.folded === true ||
     players[lastAggressor]?.allIn === true;
+  const aggressorActed =
+    lastAggressor !== null && currentPlayer === lastAggressor;
 
   if (game.currentBet === 0) {
     if (cameFullCircleStarter) {
@@ -300,7 +302,8 @@ export function advanceAfterAction(state: TableState): TableState {
 
   if (
     everyoneMatchedOrAllIn &&
-    (lastAggressorInactive ? cameFullCircleStarter : cameBackToAggressor)
+    (aggressorActed ||
+      (lastAggressorInactive ? cameFullCircleStarter : cameBackToAggressor))
   ) {
     const ns = nextStreet(street);
     if (ns === "showdown") return { ...state, street: "showdown" };
