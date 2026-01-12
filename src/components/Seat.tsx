@@ -1,4 +1,4 @@
-import Card from "./Card.js";
+﻿import Card from "./Card.js";
 import CardBack from "./CardBack.js";
 import type { Card as CardType } from "./cards.js";
 import type { PlayerState } from "../game/table.js";
@@ -28,24 +28,24 @@ export default function Seat({
   popupText,
   isActive = true,
 }: SeatProps) {
+  const displayPopup =
+    popupText ??
+    handDescription ??
+    (isWinner ? "WINNER" : player.folded ? "FOLDED" : undefined);
+
   return (
     <div
-      className={`flex flex-col items-center gap-1 transition ${
+      className={`relative flex flex-col items-center gap-1 transition ${
         isActive ? "" : "opacity-40 grayscale"
       }`}
     >
-      {/* アクションポップアチE�E�E�高さを固定してレイアウト崩れを防ぁE*/}
-      <div className="h-6 flex items-center">
-        {popupText ? (
-          <div className="text-xs px-2 py-0.5 rounded-full bg-slate-800/90 border border-slate-600 text-slate-100">
-            {popupText}
-          </div>
-        ) : (
-          <div className="h-5" aria-hidden="true" />
-        )}
-      </div>
+      {displayPopup && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-sm px-4 py-1.5 rounded-full bg-sky-500/90 border border-sky-300/70 text-slate-900 whitespace-nowrap shadow-sm">
+          {displayPopup}
+        </div>
+      )}
 
-      <div className="text-sm flex flex-col items-center">
+      <div className="text-sm flex flex-col items-center leading-tight">
         <span
           className={`${isHero ? "text-yellow-300 font-semibold" : ""} ${
             isWinner ? "text-emerald-300 font-semibold" : ""
@@ -58,22 +58,7 @@ export default function Seat({
             </span>
           )}
         </span>
-
-        <span className="mt-0.5 h-4 text-xs text-slate-300">
-          {handDescription ?? "\u00A0"}
-        </span>
-
-        <span className="h-4 text-[10px] font-semibold">
-          {isWinner ? (
-            <span className="text-emerald-300">WINNER</span>
-          ) : player.folded ? (
-            <span className="text-slate-400">FOLDED</span>
-          ) : (
-            "\u00A0"
-          )}
-        </span>
-
-        <span className="h-4 text-[10px] text-slate-300">
+        <span className="text-[10px] text-slate-300">
           Stack: {player.stack} BB
         </span>
       </div>
@@ -86,4 +71,3 @@ export default function Seat({
     </div>
   );
 }
-

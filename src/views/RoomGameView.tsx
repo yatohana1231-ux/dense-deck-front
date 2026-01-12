@@ -1,9 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import BoardArea from "../components/BoardArea.js";
 import Seat from "../components/Seat.js";
 import RoomActionBar from "../components/RoomActionBar.js";
 import { useRoomState } from "../hooks/useRoomState.js";
 import { useAuth } from "../hooks/useAuth.js";
+import type { ActionLogEntry, PlayerState } from "../game/table.js";
+import type { Street } from "../game/types.js";
+import {
+  HAND_CATEGORY_LABEL,
+  compareHandValues,
+  evaluateBestOfSeven,
+} from "../game/handEval.js";
 
 type Props = {
   apiBase: string;
@@ -32,17 +39,26 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const [startSent, setStartSent] = useState(false);
   const [clockTick, setClockTick] = useState(0);
   const [turnStartMs, setTurnStartMs] = useState<number | null>(null);
+  const [displayCurrentPlayer, setDisplayCurrentPlayer] = useState<number | null>(null);
+  const turnDelayRef = useRef<number | null>(null);
+  const [displayStreet, setDisplayStreet] = useState<Street>("preflop");
+  const streetDelayRef = useRef<number | null>(null);
+  const [showdownReveal, setShowdownReveal] = useState(false);
+  const [showdownResult, setShowdownResult] = useState(false);
+  const showdownRevealRef = useRef<number | null>(null);
+  const showdownResultRef = useRef<number | null>(null);
+  const showdownHandRef = useRef<string | null>(null);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
   const table = game?.table;
   const heroPlayer = table?.game?.players?.[heroSeatIndex];
-  const isMyTurn = table?.currentPlayer === heroSeatIndex;
+  const isMyTurn = displayCurrentPlayer === heroSeatIndex;
   const actionCtx = table ? getActionContext(table, heroSeatIndex) : null;
   const actionSeconds = room?.config?.actionSeconds ?? 60;
   const visibleBoard = useMemo(() => {
     if (!table) return [];
-    const street = table.revealStreet ?? table.street;
+    const street = displayStreet;
     const flop = table.game?.flop ?? [];
     const turn = table.game?.turn ? [table.game.turn] : [];
     const river = table.game?.river ? [table.game.river] : [];
@@ -50,7 +66,170 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     if (street === "flop") return flop;
     if (street === "turn") return [...flop, ...turn];
     return [...flop, ...turn, ...river]; // river or showdown
-  }, [table]);
+  }, [table, displayStreet]);
+
+  // Delay turn display by 1s after an action to let popup linger.
+  useEffect(() => {
+    if (!table) {
+      setDisplayCurrentPlayer(null);
+      if (turnDelayRef.current !== null) {
+        window.clearTimeout(turnDelayRef.current);
+        turnDelayRef.current = null;
+      }
+      return;
+    }
+    const next = table.currentPlayer ?? null;
+    if (displayCurrentPlayer === null) {
+      setDisplayCurrentPlayer(next);
+      return;
+    }
+    if (next === displayCurrentPlayer) return;
+    if (turnDelayRef.current !== null) {
+      window.clearTimeout(turnDelayRef.current);
+    }
+    turnDelayRef.current = window.setTimeout(() => {
+      setDisplayCurrentPlayer(next);
+      turnDelayRef.current = null;
+    }, 1000);
+    return () => {
+      if (turnDelayRef.current !== null) {
+        window.clearTimeout(turnDelayRef.current);
+        turnDelayRef.current = null;
+      }
+    };
+  }, [table, displayCurrentPlayer]);
+
+  const streetOrder: Street[] = ["preflop", "flop", "turn", "river", "showdown"];
+  useEffect(() => {
+    if (!table) {
+      setDisplayStreet("preflop");
+      if (streetDelayRef.current !== null) {
+        window.clearTimeout(streetDelayRef.current);
+        streetDelayRef.current = null;
+      }
+      return;
+    }
+    const nextStreet = (table.revealStreet ?? table.street) as Street;
+    if (!displayStreet) {
+      setDisplayStreet(nextStreet);
+      return;
+    }
+    if (nextStreet === displayStreet) return;
+    const currentIdx = streetOrder.indexOf(displayStreet);
+    const nextIdx = streetOrder.indexOf(nextStreet);
+    if (nextIdx <= currentIdx) {
+      setDisplayStreet(nextStreet);
+      return;
+    }
+    if (streetDelayRef.current !== null) {
+      window.clearTimeout(streetDelayRef.current);
+    }
+    streetDelayRef.current = window.setTimeout(() => {
+      setDisplayStreet(nextStreet);
+      streetDelayRef.current = null;
+    }, 1000);
+    return () => {
+      if (streetDelayRef.current !== null) {
+        window.clearTimeout(streetDelayRef.current);
+        streetDelayRef.current = null;
+      }
+    };
+  }, [table, displayStreet, streetOrder]);
+
+  const lastAction = useMemo(() => {
+    const log = table?.actionLog ?? [];
+    return log.length > 0 ? log[log.length - 1] : null;
+  }, [table?.actionLog]);
+
+  const isShowdown =
+    table?.street === "showdown" || table?.revealStreet === "showdown";
+
+  const showdownInfo = useMemo(() => {
+    if (!table || !isShowdown) {
+      return {
+        winners: [] as number[],
+        values: [] as (ReturnType<typeof evaluateBestOfSeven> | null)[],
+      };
+    }
+    if (table.autoWin !== null) {
+      return {
+        winners: [table.autoWin],
+        values: Array(table.game.players.length).fill(null),
+      };
+    }
+    const board = [...table.game.flop, table.game.turn, table.game.river];
+    if (board.length < 5) {
+      return {
+        winners: [] as number[],
+        values: [] as (ReturnType<typeof evaluateBestOfSeven> | null)[],
+      };
+    }
+    let best: ReturnType<typeof evaluateBestOfSeven> | null = null;
+    let winners: number[] = [];
+    const values = table.game.players.map((p: PlayerState, idx: number) => {
+      if (p.folded) return null;
+      const v = evaluateBestOfSeven(p.hand, board);
+      if (!best) {
+        best = v;
+        winners = [idx];
+      } else {
+        const cmp = compareHandValues(v, best);
+        if (cmp > 0) {
+          best = v;
+          winners = [idx];
+        } else if (cmp === 0) {
+          winners.push(idx);
+        }
+      }
+      return v;
+    });
+    return { winners, values };
+  }, [table, isShowdown]);
+
+  useEffect(() => {
+    if (!table || !isShowdown) {
+      setShowdownReveal(false);
+      setShowdownResult(false);
+      showdownHandRef.current = null;
+      if (showdownRevealRef.current !== null) {
+        window.clearTimeout(showdownRevealRef.current);
+        showdownRevealRef.current = null;
+      }
+      if (showdownResultRef.current !== null) {
+        window.clearTimeout(showdownResultRef.current);
+        showdownResultRef.current = null;
+      }
+      return;
+    }
+    if (showdownHandRef.current === table.handId) return;
+    showdownHandRef.current = table.handId;
+    setShowdownReveal(false);
+    setShowdownResult(false);
+    if (showdownRevealRef.current !== null) {
+      window.clearTimeout(showdownRevealRef.current);
+    }
+    if (showdownResultRef.current !== null) {
+      window.clearTimeout(showdownResultRef.current);
+    }
+    showdownRevealRef.current = window.setTimeout(() => {
+      setShowdownReveal(true);
+      showdownRevealRef.current = null;
+    }, 1000);
+    showdownResultRef.current = window.setTimeout(() => {
+      setShowdownResult(true);
+      showdownResultRef.current = null;
+    }, 2000);
+    return () => {
+      if (showdownRevealRef.current !== null) {
+        window.clearTimeout(showdownRevealRef.current);
+        showdownRevealRef.current = null;
+      }
+      if (showdownResultRef.current !== null) {
+        window.clearTimeout(showdownResultRef.current);
+        showdownResultRef.current = null;
+      }
+    };
+  }, [table, isShowdown]);
 
   // heartbeat
   useEffect(() => {
@@ -142,6 +321,24 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     });
   }, [maxSeats, heroSeatIndex]);
 
+  const getHandDescription = (
+    v?: ReturnType<typeof evaluateBestOfSeven> | null
+  ) => {
+    if (!v) return "";
+    const base = HAND_CATEGORY_LABEL[v.category];
+    switch (v.category) {
+      case "one-pair":
+        return `${base} ${v.ranks[0]}`;
+      case "two-pair":
+        return v.ranks.length >= 2 ? `${base} ${v.ranks[0]} and ${v.ranks[1]}` : base;
+      case "three-of-a-kind":
+      case "four-of-a-kind":
+        return `${base} ${v.ranks[0]}`;
+      default:
+        return base;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
       <div className="w-full max-w-5xl flex items-center justify-between">
@@ -194,8 +391,19 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
             const player =
               table?.game.players?.[seatIdx] ??
               (seat ? { hand: [], bet: 0, stack: seat.stack, folded: false, allIn: false } : null);
-            const showCards = seatIdx === heroSeatIndex || table?.street === "showdown";
+            const showCards = seatIdx === heroSeatIndex || (isShowdown && showdownReveal);
             const isEmpty = !seat;
+            const resultPopup =
+              showdownResult && isShowdown && seat
+                ? showdownInfo.winners.includes(seatIdx)
+                  ? `WIN ${getHandDescription(showdownInfo.values[seatIdx])}`
+                  : "LOSE"
+                : undefined;
+            const actionPopup =
+              lastAction && lastAction.playerIndex === seatIdx
+                ? actionLabel(lastAction)
+                : undefined;
+            const popup = resultPopup ?? actionPopup;
 
             const posClass =
               i === 0
@@ -223,8 +431,8 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
                     isWinner={false}
                     showCards={showCards}
                     isButton={table?.btnIndex === seatIdx}
-                    popupText={undefined}
-                    isActive={table?.currentPlayer === seatIdx}
+                    popupText={popup}
+                    isActive={displayCurrentPlayer === seatIdx}
                   />
                 ) : (
                   <div className="w-24 h-28 rounded-xl border border-slate-700 bg-slate-800/30" />
@@ -255,7 +463,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
             </div>
           </div>
           <RoomActionBar
-            currentPlayer={table.currentPlayer ?? 0}
+            currentPlayer={displayCurrentPlayer ?? table.currentPlayer ?? 0}
             legal={actionCtx?.legal ?? []}
             amount={actionAmount}
             onAmountChange={(v) => setActionAmount(v)}
@@ -278,6 +486,24 @@ function positionLabel(playerIndex: number, btnIndex: number) {
   if (playerIndex === (btnIndex + 1) % n) return "BB";
   if (playerIndex === (btnIndex + 2) % n) return "UTG";
   return "CO";
+}
+
+function actionLabel(entry: ActionLogEntry) {
+  const amt = entry.amount ?? 0;
+  switch (entry.kind) {
+    case "fold":
+      return "Fold";
+    case "check":
+      return "Check";
+    case "call":
+      return amt > 0 ? `Call ${amt}BB` : "Call";
+    case "bet":
+      return amt > 0 ? `Bet ${amt}BB` : "Bet";
+    case "raise":
+      return amt > 0 ? `Raise ${amt}BB` : "Raise";
+    default:
+      return entry.kind;
+  }
 }
 
 function getActionContext(table: any, heroSeatIndex: number) {
