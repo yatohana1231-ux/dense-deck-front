@@ -30,6 +30,10 @@ export default function RoomActionBar({
     : legal.includes("raise")
     ? "raise"
     : legal[0];
+  const canAllIn =
+    typeof stack === "number" &&
+    stack > 0 &&
+    (legal.includes("bet") || legal.includes("raise"));
 
   return (
     <div className="flex flex-col gap-2">
@@ -67,18 +71,6 @@ export default function RoomActionBar({
             />
           </label>
           <div className="flex gap-1">
-            {typeof stack === "number" && (
-              <button
-                type="button"
-                onClick={() => onAllIn?.()}
-                disabled={disabled || stack <= 0}
-                className={`px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 text-xs font-semibold ${
-                  disabled || stack <= 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
-                All-in
-              </button>
-            )}
             {legal.map((k) => (
               <button
                 key={k}
@@ -91,6 +83,18 @@ export default function RoomActionBar({
                 {k}
               </button>
             ))}
+            {canAllIn && (
+              <button
+                type="button"
+                onClick={() => onAllIn?.()}
+                disabled={disabled}
+                className={`px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 text-xs font-semibold ${
+                  disabled ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                All-in
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -11,6 +11,9 @@ export const PRESENTATION_DELAYS = {
 
 export function actionLabel(entry: ActionLogEntry): string {
   const amt = entry.amount ?? 0;
+  if ((entry.kind === "bet" || entry.kind === "raise") && entry.stackAfter === 0) {
+    return amt > 0 ? `All-in ${amt}BB` : "All-in";
+  }
   switch (entry.kind) {
     case "fold":
       return "Fold";

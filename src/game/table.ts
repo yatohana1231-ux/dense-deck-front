@@ -285,14 +285,6 @@ export function advanceAfterAction(state: TableState): TableState {
     return { ...state, street: "showdown", autoWin: winner };
   }
 
-  if (activeIndices.length >= 2 && actionable.length <= 1) {
-    return {
-      ...state,
-      street: "showdown",
-      revealStreet: "river",
-    };
-  }
-
   const nextIndex = findNextActiveInOrder(actionOrder, players, currentPlayer);
 
   const everyoneMatchedOrAllIn = players
@@ -316,6 +308,9 @@ export function advanceAfterAction(state: TableState): TableState {
     if (cameFullCircleStarter) {
       const ns = nextStreet(street);
       if (ns === "showdown") return { ...state, street: "showdown", revealStreet: street };
+      if (actionable.length <= 1) {
+        return { ...state, street: "showdown", revealStreet: "river" };
+      }
       const resetPlayers = players.map((p) => ({ ...p, bet: 0 }));
       const firstActive = findFirstActiveInOrder(nextStreetOrder, resetPlayers);
       return {
@@ -341,6 +336,9 @@ export function advanceAfterAction(state: TableState): TableState {
   ) {
     const ns = nextStreet(street);
     if (ns === "showdown") return { ...state, street: "showdown" };
+    if (actionable.length <= 1) {
+      return { ...state, street: "showdown", revealStreet: "river" };
+    }
     const resetPlayers = players.map((p) => ({ ...p, bet: 0 }));
     const firstActive = findFirstActiveInOrder(nextStreetOrder, resetPlayers);
     return {

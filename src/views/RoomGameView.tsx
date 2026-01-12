@@ -305,18 +305,23 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     if (!foldReserved) return;
     if (!isMyTurn) return;
     if (loading) return;
-    if (!actionCtx?.legal?.includes("fold")) return;
+    if (!actionCtx?.legal) return;
     setFoldReserved(false);
-    void sendAction("fold");
+    const autoKind = actionCtx.legal.includes("check") ? "check" : "fold";
+    if (!actionCtx.legal.includes(autoKind)) return;
+    void sendAction(autoKind);
   }, [foldReserved, isMyTurn, loading, actionCtx?.legal]);
 
-  const sendAction = async (kind: string) => {
+  const sendAction = async (kind: string, overrideAmount?: number) => {
     if (heroSeatIndex < 0) {
       setError("You are not seated in this room.");
       return;
     }
     const action: any = { playerIndex: heroSeatIndex, kind };
-    if (kind === "bet" || kind === "raise") action.amount = actionAmount;
+    if (kind === "bet" || kind === "raise") {
+      action.amount =
+        typeof overrideAmount === "number" ? overrideAmount : actionAmount;
+    }
     setLoading(true);
     try {
       await postJson(`${apiBase}/api/rooms/${roomId}/action`, action);
@@ -544,9 +549,20 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
             onAmountChange={(v) => setActionAmount(v)}
             onAction={(k) => sendAction(k)}
             onAllIn={() => {
-              if (typeof heroPlayer?.stack === "number") {
-                setActionAmount(heroPlayer.stack);
-              }
+              if (!actionCtx) return;
+              const allInAmount =
+                typeof actionCtx.maxTotal === "number"
+                  ? actionCtx.maxTotal
+                  : undefined;
+              if (typeof allInAmount !== "number") return;
+              const kind = actionCtx.legal.includes("bet")
+                ? "bet"
+                : actionCtx.legal.includes("raise")
+                ? "raise"
+                : null;
+              if (!kind) return;
+              setActionAmount(allInAmount);
+              void sendAction(kind, allInAmount);
             }}
             disabled={loading || !isMyTurn || heroSeatIndex < 0}
             toCall={actionCtx?.toCall}
@@ -582,11 +598,12 @@ function getActionContext(table: any, heroSeatIndex: number) {
     maxTotal
   );
 
-  const legal: string[] = ["fold"];
+  const legal: string[] = [];
   if (toCall === 0) {
     legal.push("check");
     if ((p.stack ?? 0) > 0) legal.push("bet");
   } else {
+    legal.push("fold");
     legal.push("call");
     if ((p.stack ?? 0) > toCall) legal.push("raise");
   }
