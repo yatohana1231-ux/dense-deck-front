@@ -3,7 +3,6 @@ import type { HandRecord } from "../game/history/recorder.js";
 import type { TableState, ActionLogEntry, PlayerState, Street } from "../game/table.js";
 import Seat from "../components/Seat.js";
 import BoardArea from "../components/BoardArea.js";
-import InfoBar from "../components/InfoBar.js";
 import type { Card as CardType } from "../components/cards.js";
 import {
   actionLabel,
@@ -88,6 +87,7 @@ function ReplayView({ record, onBack }: Props) {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(true);
   const timerRef = useRef<number | null>(null);
+  const finalizeTimerRef = useRef<number | null>(null);
   const resultTimerRef = useRef<number | null>(null);
   const [lastAction, setLastAction] = useState<{ playerIndex: number; text: string } | null>(null);
   const [showResultPopup, setShowResultPopup] = useState(false);
@@ -174,20 +174,31 @@ function ReplayView({ record, onBack }: Props) {
   useEffect(() => {
     if (step >= actionCount) {
       setPlaying(false);
-      setLastAction(null);
       setShowResultPopup(false);
-      setTable((prev) => ({ ...prev, street: record.streetEnded ?? "showdown" }));
+      const endedStreet = record.streetEnded ?? "showdown";
+      if (finalizeTimerRef.current !== null) {
+        window.clearTimeout(finalizeTimerRef.current);
+      }
+      finalizeTimerRef.current = window.setTimeout(() => {
+        setTable((prev) => ({ ...prev, street: endedStreet }));
+        setLastAction(null);
+        finalizeTimerRef.current = null;
+      }, PRESENTATION_DELAYS.actionMs);
       if (resultTimerRef.current !== null) {
         window.clearTimeout(resultTimerRef.current);
       }
-      if ((record.streetEnded ?? "showdown") === "showdown") {
+      if (endedStreet === "showdown") {
         resultTimerRef.current = window.setTimeout(() => {
           setShowResultPopup(true);
           resultTimerRef.current = null;
-        }, PRESENTATION_DELAYS.showdownRevealMs + PRESENTATION_DELAYS.showdownResultMs);
+        }, PRESENTATION_DELAYS.actionMs + PRESENTATION_DELAYS.showdownRevealMs + PRESENTATION_DELAYS.showdownResultMs);
       }
     }
     return () => {
+      if (finalizeTimerRef.current !== null) {
+        window.clearTimeout(finalizeTimerRef.current);
+        finalizeTimerRef.current = null;
+      }
       if (resultTimerRef.current !== null) {
         window.clearTimeout(resultTimerRef.current);
         resultTimerRef.current = null;
@@ -209,12 +220,14 @@ function ReplayView({ record, onBack }: Props) {
 
   const togglePlay = () => setPlaying((v) => !v);
 
-  const getHandDescriptionMemo = (idx: number) =>
-    showResultPopup && table.street === "showdown"
-      ? (showdown?.winners.includes(idx)
-          ? `WIN\n${getHandDescription(showdown.values[idx] ?? undefined)}`
-          : "LOSE")
-      : undefined;
+  const getHandDescriptionMemo = (idx: number) => {
+    if (!showResultPopup || table.street !== "showdown") return undefined;
+    const participant = participantBySeat.get(idx);
+    if (!participant) return undefined;
+    return showdown?.winners.includes(idx)
+      ? `WIN\n${getHandDescription(showdown.values[idx] ?? undefined)}`
+      : "LOSE";
+  };
 
   const isSeatActive = (idx: number) => {
     if (table.street === "showdown") {
@@ -253,17 +266,6 @@ function ReplayView({ record, onBack }: Props) {
         </div>
       </div>
 
-      <div className="w-full max-w-4xl">
-        <InfoBar
-          streetLabel={table.street}
-          pot={table.game.pot}
-          devShowAll={true}
-          onToggleShowAll={() => {}}
-          onNewHand={() => {}}
-          showdownText={undefined}
-        />
-      </div>
-
       <div className="w-full max-w-4xl mt-2 grid grid-cols-[1fr_3fr_1fr] grid-rows-[0.7fr_auto_0.7fr] gap-2 h-[280px] lg:h-[310px]">
         {seatOrder.map((seatIdx, i) => {
           const player =
@@ -279,29 +281,39 @@ function ReplayView({ record, onBack }: Props) {
               ? `You (${heroName})`
               : "You"
             : nameBySeat.get(seatIdx) ?? `P${seatIdx}`;
+          const isEmpty = !participant;
           const posClass =
             i === 0
               ? "row-start-2 col-start-1 flex items-start justify-center mt-1"
-              : i === 1
+            : i === 1
               ? "row-start-1 col-start-2 flex items-center justify-center"
-              : i === 2
+            : i === 2
               ? "row-start-2 col-start-3 flex items-start justify-center mt-1"
-              : "row-start-3 col-start-2 flex flex-col items-center justify-center gap-3";
+            : "row-start-3 col-start-2 flex flex-col items-center justify-center gap-3";
 
           return (
             <div key={seatIdx} className={posClass}>
-              <Seat
-                label={label}
-                hand={player.hand ?? []}
-                player={player}
-                isHero={isHero}
-                isWinner={showResultPopup ? !!showdown?.winners.includes(seatIdx) : false}
-                handDescription={getHandDescriptionMemo(seatIdx)}
-                showCards={shouldReveal}
-                isButton={table.btnIndex === seatIdx}
-                popupText={lastAction?.playerIndex === seatIdx ? lastAction.text : undefined}
-                isActive={isSeatActive(seatIdx)}
-              />
+              {isEmpty ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-700/40 text-slate-400">
+                    {positionLabel(seatIdx, table.btnIndex)}
+                  </div>
+                  <div className="w-24 h-28 rounded-xl border border-slate-700 bg-slate-800/30" />
+                </div>
+              ) : (
+                <Seat
+                  label={label}
+                  hand={player.hand ?? []}
+                  player={player}
+                  isHero={isHero}
+                  isWinner={showResultPopup ? !!showdown?.winners.includes(seatIdx) : false}
+                  handDescription={getHandDescriptionMemo(seatIdx)}
+                  showCards={shouldReveal}
+                  isButton={table.btnIndex === seatIdx}
+                  popupText={lastAction?.playerIndex === seatIdx ? lastAction.text : undefined}
+                  isActive={isSeatActive(seatIdx)}
+                />
+              )}
             </div>
           );
         })}
@@ -315,4 +327,12 @@ function ReplayView({ record, onBack }: Props) {
 }
 
 export default ReplayView;
+
+function positionLabel(playerIndex: number, btnIndex: number) {
+  const n = 4;
+  if (playerIndex === btnIndex) return "BTN";
+  if (playerIndex === (btnIndex + 1) % n) return "BB";
+  if (playerIndex === (btnIndex + 2) % n) return "UTG";
+  return "CO";
+}
 

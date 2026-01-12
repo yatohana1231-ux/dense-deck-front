@@ -52,9 +52,12 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const showdownHandRef = useRef<string | null>(null);
   const nextHandTimerRef = useRef<number | null>(null);
   const nextHandForRef = useRef<string | null>(null);
+  const [foldReserved, setFoldReserved] = useState(false);
+  const [rebuyLoading, setRebuyLoading] = useState(false);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
+  const heroSeat = room?.seats.find((s) => s.userId === heroUserId) ?? null;
   const table = game?.table;
   const heroPlayer = table?.game?.players?.[heroSeatIndex];
   const isMyTurn = displayCurrentPlayer === heroSeatIndex;
@@ -216,8 +219,9 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     return () => window.clearInterval(id);
   }, [apiBase, roomId]);
 
-  const seatCount = room?.seats?.length ?? 0;
-  const neededPlayers = Math.max(0, 2 - seatCount);
+  const activeSeatCount =
+    room?.seats?.filter((s) => !s.isSittingOut && s.stack > 0).length ?? 0;
+  const neededPlayers = Math.max(0, 2 - activeSeatCount);
 
   // ストリートが進むたびにベット欄をミニマムにリセット
   useEffect(() => {
@@ -297,6 +301,15 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     };
   }, [table, game?.handEnded, isShowdown, showdownResult, neededPlayers, apiBase, roomId]);
 
+  useEffect(() => {
+    if (!foldReserved) return;
+    if (!isMyTurn) return;
+    if (loading) return;
+    if (!actionCtx?.legal?.includes("fold")) return;
+    setFoldReserved(false);
+    void sendAction("fold");
+  }, [foldReserved, isMyTurn, loading, actionCtx?.legal]);
+
   const sendAction = async (kind: string) => {
     if (heroSeatIndex < 0) {
       setError("You are not seated in this room.");
@@ -315,7 +328,20 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     }
   };
 
+  const leaveRoom = async () => {
+    try {
+      await postJson(`${apiBase}/api/rooms/${roomId}/leave`, {});
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+      return;
+    }
+    window.localStorage.removeItem("lastRoomId");
+    onBack();
+  };
+
   const maxSeats = room?.maxSeats ?? 4;
+  const rebuyAmount = room?.config?.initialStackBB ?? 100;
+  const showRebuyModal = !!(game?.handEnded && heroSeat && heroSeat.stack <= 0);
 
   // Seat order rotated so hero (if seated) is at bottom index (maxSeats - 1)
   const seatOrder = useMemo(() => {
@@ -335,16 +361,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
       <div className="w-full max-w-5xl flex items-center justify-between">
         <h1 className="text-2xl font-bold">Online Table</h1>
         <button
-          onClick={async () => {
-            try {
-              await postJson(`${apiBase}/api/rooms/${roomId}/leave`, {});
-            } catch (e: any) {
-              setError(e?.message ?? String(e));
-              return;
-            }
-            window.localStorage.removeItem("lastRoomId");
-            onBack();
-          }}
+          onClick={leaveRoom}
           className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-sm font-semibold"
         >
           Leave
@@ -364,6 +381,53 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+      {showRebuyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60">
+          <div className="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-800 p-5 text-center">
+            <div className="text-sm font-semibold text-slate-100">Rebuy</div>
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <input
+                type="number"
+                value={rebuyAmount}
+                readOnly
+                className="w-24 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-200 text-center"
+              />
+              <span className="text-xs text-slate-300">BB</span>
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                onClick={async () => {
+                  if (rebuyAmount <= 0 || rebuyLoading) return;
+                  setRebuyLoading(true);
+                  try {
+                    await postJson(`${apiBase}/api/rooms/${roomId}/rebuy`, {
+                      amount: rebuyAmount,
+                    });
+                  } catch (e: any) {
+                    setError(e?.message ?? String(e));
+                  } finally {
+                    setRebuyLoading(false);
+                  }
+                }}
+                disabled={rebuyAmount <= 0 || rebuyLoading}
+                className={`px-4 py-1.5 rounded text-sm font-semibold ${
+                  rebuyAmount <= 0 || rebuyLoading
+                    ? "bg-slate-600 text-slate-300 cursor-not-allowed"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                }`}
+              >
+                Rebuy
+              </button>
+              <button
+                onClick={leaveRoom}
+                className="px-4 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+              >
+                Exit
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -455,12 +519,22 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
         <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-semibold">Send Action</div>
-            <div
-              className={`text-sm font-semibold ${
-                isMyTurn ? "text-emerald-300" : "text-slate-500"
-              }`}
-            >
-              Clock: {clockSeconds}s
+            <div className="flex flex-col items-end gap-1">
+              <div
+                className={`text-sm font-semibold ${
+                  isMyTurn ? "text-emerald-300" : "text-slate-500"
+                }`}
+              >
+                Clock: {clockSeconds}s
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={foldReserved}
+                  onChange={(e) => setFoldReserved(e.target.checked)}
+                />
+                Auto Fold
+              </label>
             </div>
           </div>
           <RoomActionBar
@@ -469,6 +543,11 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
             amount={actionAmount}
             onAmountChange={(v) => setActionAmount(v)}
             onAction={(k) => sendAction(k)}
+            onAllIn={() => {
+              if (typeof heroPlayer?.stack === "number") {
+                setActionAmount(heroPlayer.stack);
+              }
+            }}
             disabled={loading || !isMyTurn || heroSeatIndex < 0}
             toCall={actionCtx?.toCall}
             minBetTotal={actionCtx?.minBetTotal}

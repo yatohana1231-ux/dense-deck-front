@@ -4,6 +4,7 @@ type Props = {
   amount: number;
   onAmountChange: (v: number) => void;
   onAction: (kind: string) => void;
+  onAllIn?: () => void;
   disabled?: boolean;
   toCall?: number;
   minBetTotal?: number;
@@ -17,6 +18,7 @@ export default function RoomActionBar({
   amount,
   onAmountChange,
   onAction,
+  onAllIn,
   disabled,
   toCall,
   minBetTotal,
@@ -46,6 +48,13 @@ export default function RoomActionBar({
               type="number"
               value={amount}
               onChange={(e) => onAmountChange(Number(e.target.value))}
+              onBlur={(e) => {
+                if (typeof stack !== "number") return;
+                const next = Number(e.target.value);
+                if (Number.isFinite(next) && next > stack) {
+                  onAmountChange(stack);
+                }
+              }}
               onFocus={(e) => e.target.select()}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && primaryAction) {
@@ -58,6 +67,18 @@ export default function RoomActionBar({
             />
           </label>
           <div className="flex gap-1">
+            {typeof stack === "number" && (
+              <button
+                type="button"
+                onClick={() => onAllIn?.()}
+                disabled={disabled || stack <= 0}
+                className={`px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 text-xs font-semibold ${
+                  disabled || stack <= 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                All-in
+              </button>
+            )}
             {legal.map((k) => (
               <button
                 key={k}
