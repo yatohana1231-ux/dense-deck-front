@@ -271,6 +271,10 @@ export function advanceAfterAction(state: TableState): TableState {
   const cameFullCircleStarter = nextIndex === effectiveStarter;
   const cameBackToAggressor =
     lastAggressor !== null ? nextIndex === lastAggressor : cameFullCircleStarter;
+  const lastAggressorInactive =
+    lastAggressor === null ||
+    players[lastAggressor]?.folded === true ||
+    players[lastAggressor]?.allIn === true;
 
   if (game.currentBet === 0) {
     if (cameFullCircleStarter) {
@@ -294,7 +298,10 @@ export function advanceAfterAction(state: TableState): TableState {
     }
   }
 
-  if (everyoneMatchedOrAllIn && cameBackToAggressor) {
+  if (
+    everyoneMatchedOrAllIn &&
+    (lastAggressorInactive ? cameFullCircleStarter : cameBackToAggressor)
+  ) {
     const ns = nextStreet(street);
     if (ns === "showdown") return { ...state, street: "showdown" };
     const resetPlayers = players.map((p) => ({ ...p, bet: 0 }));
