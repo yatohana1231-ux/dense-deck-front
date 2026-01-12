@@ -41,7 +41,7 @@ export default function Seat({
     >
       {displayPopup && (
         <div
-          className={`absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-sm px-4 py-1.5 rounded-full whitespace-nowrap shadow-sm ${
+          className={`absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-sm px-4 py-1.5 min-w-[12rem] max-w-[16rem] w-max rounded-full text-center leading-tight whitespace-pre-line break-words shadow-sm ${
             isWinner
               ? "bg-emerald-400/95 border border-emerald-200 text-slate-900"
               : player.folded

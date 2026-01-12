@@ -88,7 +88,9 @@ function ReplayView({ record, onBack }: Props) {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(true);
   const timerRef = useRef<number | null>(null);
+  const resultTimerRef = useRef<number | null>(null);
   const [lastAction, setLastAction] = useState<{ playerIndex: number; text: string } | null>(null);
+  const [showResultPopup, setShowResultPopup] = useState(false);
   const heroSeatIndex = record.heroIndex ?? 0;
   const seatCount = record.seatCount ?? record.holeCards.length;
   const participants = record.participants ?? [];
@@ -173,8 +175,24 @@ function ReplayView({ record, onBack }: Props) {
     if (step >= actionCount) {
       setPlaying(false);
       setLastAction(null);
+      setShowResultPopup(false);
       setTable((prev) => ({ ...prev, street: record.streetEnded ?? "showdown" }));
+      if (resultTimerRef.current !== null) {
+        window.clearTimeout(resultTimerRef.current);
+      }
+      if ((record.streetEnded ?? "showdown") === "showdown") {
+        resultTimerRef.current = window.setTimeout(() => {
+          setShowResultPopup(true);
+          resultTimerRef.current = null;
+        }, PRESENTATION_DELAYS.showdownRevealMs + PRESENTATION_DELAYS.showdownResultMs);
+      }
     }
+    return () => {
+      if (resultTimerRef.current !== null) {
+        window.clearTimeout(resultTimerRef.current);
+        resultTimerRef.current = null;
+      }
+    };
   }, [step, actionCount, record.streetEnded]);
 
   const reset = () => {
@@ -182,16 +200,25 @@ function ReplayView({ record, onBack }: Props) {
     setStep(0);
     setPlaying(true);
     setLastAction(null);
+    setShowResultPopup(false);
+    if (resultTimerRef.current !== null) {
+      window.clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = null;
+    }
   };
 
   const togglePlay = () => setPlaying((v) => !v);
 
   const getHandDescriptionMemo = (idx: number) =>
-    showdown ? getHandDescription(showdown.values[idx] ?? undefined) : undefined;
+    showResultPopup && table.street === "showdown"
+      ? (showdown?.winners.includes(idx)
+          ? `WIN\n${getHandDescription(showdown.values[idx] ?? undefined)}`
+          : "LOSE")
+      : undefined;
 
   const isSeatActive = (idx: number) => {
     if (table.street === "showdown") {
-      return !!showdown?.winners.includes(idx);
+      return showResultPopup ? !!showdown?.winners.includes(idx) : false;
     }
     return table.currentPlayer === idx;
   };
@@ -268,7 +295,7 @@ function ReplayView({ record, onBack }: Props) {
                 hand={player.hand ?? []}
                 player={player}
                 isHero={isHero}
-                isWinner={!!showdown?.winners.includes(seatIdx)}
+                isWinner={showResultPopup ? !!showdown?.winners.includes(seatIdx) : false}
                 handDescription={getHandDescriptionMemo(seatIdx)}
                 showCards={shouldReveal}
                 isButton={table.btnIndex === seatIdx}

@@ -42,6 +42,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const [turnStartMs, setTurnStartMs] = useState<number | null>(null);
   const [displayCurrentPlayer, setDisplayCurrentPlayer] = useState<number | null>(null);
   const turnDelayRef = useRef<number | null>(null);
+  const lastHandIdRef = useRef<string | null>(null);
   const [displayStreet, setDisplayStreet] = useState<Street>("preflop");
   const streetDelayRef = useRef<number | null>(null);
   const [showdownReveal, setShowdownReveal] = useState(false);
@@ -79,6 +80,15 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
         window.clearTimeout(turnDelayRef.current);
         turnDelayRef.current = null;
       }
+      return;
+    }
+    if (table.handId !== lastHandIdRef.current) {
+      lastHandIdRef.current = table.handId;
+      if (turnDelayRef.current !== null) {
+        window.clearTimeout(turnDelayRef.current);
+        turnDelayRef.current = null;
+      }
+      setDisplayCurrentPlayer(table.currentPlayer ?? null);
       return;
     }
     const next = table.currentPlayer ?? null;
@@ -378,19 +388,19 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
               showdownResult && isShowdown && seat
                 ? showdownInfo.winners.includes(seatIdx)
                 : false;
-            const isLoser =
-              showdownResult && isShowdown && seat ? !isWinner : false;
-            const resultPopup =
-              showdownResult && isShowdown && seat
-                ? isWinner
-                  ? `WIN ${getHandDescription(showdownInfo.values[seatIdx])}`
-                  : "LOSE"
-                : undefined;
             const actionPopup =
               lastAction && lastAction.playerIndex === seatIdx
                 ? actionLabel(lastAction)
                 : undefined;
-            const popup = resultPopup ?? actionPopup;
+            const popupAllowed =
+              !lastAction || lastAction.street === displayStreet;
+            const resultPopup =
+              showdownResult && isShowdown && seat
+                ? isWinner
+                  ? `WIN\n${getHandDescription(showdownInfo.values[seatIdx])}`
+                  : "LOSE"
+                : undefined;
+            const popup = popupAllowed ? resultPopup ?? actionPopup : undefined;
 
             const posClass =
               i === 0

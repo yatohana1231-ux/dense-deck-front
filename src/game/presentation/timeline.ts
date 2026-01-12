@@ -6,7 +6,7 @@ export const PRESENTATION_DELAYS = {
   actionMs: 1000,
   boardMs: 1000,
   showdownRevealMs: 1000,
-  showdownResultMs: 1000,
+  showdownResultMs: 2000,
 };
 
 export function actionLabel(entry: ActionLogEntry): string {
