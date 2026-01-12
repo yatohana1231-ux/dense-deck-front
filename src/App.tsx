@@ -150,8 +150,14 @@ function App() {
         onBack={() => setView("top")}
         page={historyPage}
         hasNext={hasNext}
-        onPrev={() => setHistoryPage((p) => Math.max(1, p - 1))}
-        onNext={() => setHistoryPage((p) => p + 1)}
+        onPrev={() => {
+          setHistoryPage((p) => Math.max(1, p - 1));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        onNext={() => {
+          setHistoryPage((p) => p + 1);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
       />
     );
   }

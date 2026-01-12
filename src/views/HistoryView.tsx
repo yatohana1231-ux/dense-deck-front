@@ -95,6 +95,31 @@ function HistoryView({
       </div>
 
       <div className="w-full max-w-4xl flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onPrev}
+            disabled={page === 1}
+            className={`px-3 py-1.5 rounded text-sm font-semibold ${
+              page === 1
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                : "bg-slate-700 hover:bg-slate-600"
+            }`}
+          >
+            Prev
+          </button>
+          <div className="text-xs text-slate-400">Page {page}</div>
+          <button
+            onClick={onNext}
+            disabled={!hasNext}
+            className={`px-3 py-1.5 rounded text-sm font-semibold ${
+              !hasNext
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                : "bg-slate-700 hover:bg-slate-600"
+            }`}
+          >
+            Next
+          </button>
+        </div>
         {history.length === 0 ? (
           <p className="text-sm text-slate-300">No hands recorded yet.</p>
         ) : (
