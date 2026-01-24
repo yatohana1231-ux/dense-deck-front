@@ -41,7 +41,6 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   const [actionAmount, setActionAmount] = useState(0);
   const [startSent, setStartSent] = useState(false);
   const [clockTick, setClockTick] = useState(0);
-  const [turnStartMs, setTurnStartMs] = useState<number | null>(null);
   const [displayCurrentPlayer, setDisplayCurrentPlayer] = useState<number | null>(null);
   const turnDelayRef = useRef<number | null>(null);
   const lastHandIdRef = useRef<string | null>(null);
@@ -280,27 +279,25 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
   }, [table?.street, table?.revealStreet, heroSeatIndex, table]);
 
   useEffect(() => {
-    if (!isMyTurn) {
-      setTurnStartMs(null);
+    if (!table || !game?.actionDeadline) {
       setClockTick(0);
       return undefined;
     }
-    const now = Date.now();
-    setTurnStartMs(now);
-    setClockTick(now);
+    setClockTick(Date.now());
     const id = window.setInterval(() => {
       setClockTick(Date.now());
     }, 1000);
     return () => window.clearInterval(id);
-  }, [isMyTurn]);
+  }, [table, game?.actionDeadline]);
 
   const clockSeconds = useMemo(() => {
-    if (!isMyTurn) return actionSeconds;
-    if (!turnStartMs) return actionSeconds;
-    const now = clockTick || Date.now();
-    const elapsedSec = Math.floor((now - turnStartMs) / 1000);
-    return Math.max(0, actionSeconds - elapsedSec);
-  }, [actionSeconds, clockTick, isMyTurn, turnStartMs]);
+    if (game?.actionDeadline) {
+      const now = clockTick || Date.now();
+      const remainingMs = game.actionDeadline - now;
+      return Math.max(0, Math.ceil(remainingMs / 1000));
+    }
+    return actionSeconds;
+  }, [actionSeconds, clockTick, game?.actionDeadline]);
 
   // auto-start when enough players and no hand yet
   useEffect(() => {

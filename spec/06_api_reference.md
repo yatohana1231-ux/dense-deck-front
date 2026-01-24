@@ -38,7 +38,7 @@
   - res: `{ type: "rooms", rooms: [...] }`
 - WS `/ws/rooms/:id`
   - res: `{ type: "room", room: ... }`
-  - res: `{ type: "game", state: ... }`
+  - res: `{ type: "game", state: ... }` (stateは`actionDeadline`を含む)
   - res: `{ type: "gameClear" }`
   - res: `{ type: "roomClosed", message: ... }`
   - res: `{ type: "error", message: ... }`

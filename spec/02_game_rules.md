@@ -50,6 +50,7 @@
 - `actionSeconds` (デフォルト60秒)
 - `reconnectGraceSeconds` (デフォルト60秒)
 - タイムアウト時は check可能ならcheck、不可ならfold
+- フロントの残り時間表示はサーバの `actionDeadline` を基準に算出する
 
 ## ショーダウン
 - showdownで役を比較し勝者決定
