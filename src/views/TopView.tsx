@@ -5,6 +5,7 @@ type Props = {
   isLoggedIn: boolean;
   username?: string;
   onRooms?: () => void;
+  onSettings?: () => void;
 };
 
 function TopView({
@@ -14,6 +15,7 @@ function TopView({
   isLoggedIn,
   username,
   onRooms,
+  onSettings,
 }: Props) {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center justify-center gap-6">
@@ -30,6 +32,14 @@ function TopView({
           className="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-lg font-semibold shadow-lg transition-colors"
         >
           Online Rooms
+        </button>
+      )}
+      {onSettings && (
+        <button
+          onClick={onSettings}
+          className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
+        >
+          Setting
         </button>
       )}
       <button

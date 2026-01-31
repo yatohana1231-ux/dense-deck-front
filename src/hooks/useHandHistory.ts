@@ -75,15 +75,23 @@ export function useHandHistory(
   shouldLoad: boolean,
   limit = 5,
   heroUserId?: string,
-  page = 1
+  page = 1,
+  excludePreflopFolds = false
 ) {
   const [history, setHistory] = useState<HandRecord[]>([]);
 
   const refresh = async () => {
     const apiBase = import.meta.env.VITE_API_BASE ?? "";
     try {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        page: String(page),
+      });
+      if (excludePreflopFolds) {
+        params.set("excludePreflopFolds", "true");
+      }
       const res = await fetch(
-        `${apiBase}/api/history?limit=${limit}&page=${page}`,
+        `${apiBase}/api/history?${params.toString()}`,
         {
           credentials: "include",
           cache: "no-store",
@@ -106,7 +114,7 @@ export function useHandHistory(
       refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldLoad, limit, page, heroUserId]);
+  }, [shouldLoad, limit, page, heroUserId, excludePreflopFolds]);
 
   return { history, refresh };
 }

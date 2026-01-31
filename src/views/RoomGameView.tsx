@@ -18,6 +18,7 @@ import { compareHandValues } from "../game/handEval.js";
 type Props = {
   apiBase: string;
   roomId: string;
+  stackDisplay: "chips" | "blinds";
   onBack: () => void;
   onRoomClosed: () => void;
 };
@@ -33,7 +34,13 @@ async function postJson(url: string, body: any) {
   return res.json();
 }
 
-export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: Props) {
+export default function RoomGameView({
+  apiBase,
+  roomId,
+  stackDisplay,
+  onBack,
+  onRoomClosed,
+}: Props) {
   const { room, game, error: wsError, closedMessage } = useRoomState(apiBase, roomId);
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +175,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
     }
     return computeShowdownInfo(table);
   }, [table, isShowdown, displayStreet]);
+  const showdownWinners = showdownInfo.winners ?? [];
 
   useEffect(() => {
     if (!table || !isShowdown) {
@@ -571,7 +579,13 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
             const player =
               displayPlayers?.[seatIdx] ??
               (seat ? { hand: [], bet: 0, stack: seat.stack, folded: false, allIn: false } : null);
-            const showCards = seatIdx === heroSeatIndex || (isShowdown && showdownReveal);
+            const shouldAutoMuck =
+              !!seat?.autoMuckWhenLosing &&
+              isShowdown &&
+              !showdownWinners.includes(seatIdx);
+            const showCards =
+              seatIdx === heroSeatIndex ||
+              (isShowdown && showdownReveal && !shouldAutoMuck);
             const isEmpty = !seat;
             const isWinner =
               showdownResult && isShowdown && seat
@@ -623,6 +637,7 @@ export default function RoomGameView({ apiBase, roomId, onBack, onRoomClosed }: 
                         ? isWinner
                         : displayCurrentPlayer === seatIdx
                     }
+                    stackDisplay={stackDisplay}
                   />
                 ) : (
                   <div className="w-24 h-28 rounded-xl border border-slate-700 bg-slate-800/30" />

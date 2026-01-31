@@ -14,6 +14,7 @@ type SeatProps = {
   isButton?: boolean;
   popupText?: string;
   isActive?: boolean;
+  stackDisplay?: "chips" | "blinds";
 };
 
 export default function Seat({
@@ -27,6 +28,7 @@ export default function Seat({
   isButton,
   popupText,
   isActive = true,
+  stackDisplay = "blinds",
 }: SeatProps) {
   const displayPopup =
     popupText ??
@@ -67,7 +69,7 @@ export default function Seat({
           )}
         </span>
         <span className="text-[10px] text-slate-300">
-          Stack: {player.stack} BB
+          Stack: {player.stack} {stackDisplay === "blinds" ? "BB" : "chips"}
         </span>
       </div>
 

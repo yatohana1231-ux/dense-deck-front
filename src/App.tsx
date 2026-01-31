@@ -12,6 +12,7 @@ import LogoutConfirmView from "./views/LogoutConfirmView.js";
 import RoomListView from "./views/RoomListView.js";
 import RoomDetailView from "./views/RoomDetailView.js";
 import RoomGameView from "./views/RoomGameView.js";
+import SettingView from "./views/SettingView.js";
 import { useHandHistory } from "./hooks/useHandHistory.js";
 import { useAuth } from "./hooks/useAuth.js";
 import type { HandRecord } from "./game/history/recorder.js";
@@ -22,6 +23,7 @@ function App() {
     | "history"
     | "replay"
     | "account"
+    | "setting"
     | "login"
     | "register"
     | "username"
@@ -36,10 +38,16 @@ function App() {
   const [view, setView] = useState<ViewMode>("top");
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
+  const [settings, setSettings] = useState<{
+    autoMuckWhenLosing: boolean;
+    historyExcludePreflopFolds: boolean;
+    stackDisplay: "chips" | "blinds";
+  } | null>(null);
 
   const auth = useAuth();
   const authReady = auth.ready;
   const isLoggedIn = !!auth.user && !auth.user.isGuest;
+  const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
   useEffect(() => {
     if (!authReady) return;
@@ -55,7 +63,8 @@ function App() {
     shouldLoadHistory,
     20,
     auth.user?.userId,
-    historyPage
+    historyPage,
+    settings?.historyExcludePreflopFolds ?? false
   );
 
   useEffect(() => {
@@ -63,6 +72,27 @@ function App() {
       refreshHistory();
     }
   }, [view, historyPage]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (!auth.user || auth.user.isGuest) {
+      setSettings(null);
+      return;
+    }
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${apiBase}/api/settings`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          autoMuckWhenLosing: boolean;
+          historyExcludePreflopFolds: boolean;
+          stackDisplay: "chips" | "blinds";
+        };
+        setSettings(data);
+      } catch {}
+    };
+    fetchSettings();
+  }, [authReady, auth.user?.userId, auth.user?.isGuest, apiBase]);
 
   const handleViewHands = () => {
     setHistoryPage(1);
@@ -92,6 +122,7 @@ function App() {
         isLoggedIn={isLoggedIn}
         username={auth.user?.username}
         onRooms={() => setView("roomList")}
+        onSettings={isLoggedIn ? () => setView("setting") : undefined}
       />
     );
   }
@@ -130,6 +161,7 @@ function App() {
       <RoomGameView
         apiBase={import.meta.env.VITE_API_BASE ?? ""}
         roomId={selectedRoomId}
+        stackDisplay={settings?.stackDisplay ?? "blinds"}
         onBack={() => setView("roomDetail")}
         onRoomClosed={() => {
           setSelectedRoomId(null);
@@ -181,6 +213,19 @@ function App() {
         onGotoRegister={() => setView("register")}
         onGotoLogin={() => setView("login")}
         onGotoUsernameChange={() => setView("username")}
+      />
+    );
+  }
+
+  if (view === "setting" && auth.user && !auth.user.isGuest) {
+    return (
+      <SettingView
+        apiBase={apiBase}
+        user={auth.user}
+        settings={settings}
+        onSettingsSaved={(next) => setSettings(next)}
+        onBack={() => setView("top")}
+        onUserUpdated={() => auth.refresh()}
       />
     );
   }
