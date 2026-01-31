@@ -34,3 +34,4 @@
 - Top -> Room List -> Room Detail -> Online Table
 - Hand History -> Replay
 - Account/Username/Reset/Login/Register 画面
+- Setting 画面（登録ユーザーのみ）

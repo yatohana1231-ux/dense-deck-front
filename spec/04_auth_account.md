@@ -35,3 +35,9 @@
   - token + password
   - token有効期限: 1時間
   - 使用済み/期限切れはエラー
+
+## パスワード変更
+- `PUT /api/user/password`
+- 認証必須（ゲスト不可）
+- req: `currentPassword`, `newPassword`, `confirmPassword`
+- newPasswordは6文字以上

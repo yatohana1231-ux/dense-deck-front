@@ -56,6 +56,8 @@
 - showdownで役を比較し勝者決定
 - side potを含む配分を計算
 - 配分後はstack更新、0以下は sit out
+- autoMuckWhenLosing 設定が有効な場合、勝敗確定後に負け確定プレイヤーの公開を抑止する
+  - 履歴保存時は `showedHoleCards=false` で記録
 
 ## ハンド終了
 - ハンド終了時に履歴をDB保存

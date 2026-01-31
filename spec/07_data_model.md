@@ -40,3 +40,10 @@
 - user_id (FK)
 - expires_at
 - used
+
+## user_settings
+- id (PK)
+- user_id (FK, UNIQUE)
+- auto_muck_when_losing
+- history_exclude_preflop_folds
+- stack_display

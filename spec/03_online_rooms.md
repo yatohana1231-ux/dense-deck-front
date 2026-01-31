@@ -36,6 +36,9 @@
 - `rebuyAmount`: 200
 - `maxSeats`: 4
 
+## 座席データ（設定反映）
+- 入室時に `autoMuckWhenLosing` を座席データとして保持し、ショーダウン表示に反映
+
 ## Rebuy
 - `POST /api/rooms/:id/rebuy` (amount指定)
 - UIは `initialStackBB` をデフォルト表示して送信

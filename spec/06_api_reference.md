@@ -11,6 +11,7 @@
 - POST `/api/auth/login`
 - POST `/api/auth/logout`
 - POST `/api/user/username`
+- PUT `/api/user/password`
 - POST `/api/password/reset/request`
 - POST `/api/password/reset/confirm`
 
@@ -30,8 +31,12 @@
   - res: `{ handId, mode, seatCount, playerOrder, hands, boardReserved }`
 
 ## History
-- GET `/api/history?limit=&page=`
+- GET `/api/history?limit=&page=&excludePreflopFolds=`
 - POST `/api/history`
+
+## Settings
+- GET `/api/settings`
+- PUT `/api/settings`
 
 ## WebSocket
 - WS `/ws/rooms`

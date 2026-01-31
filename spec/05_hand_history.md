@@ -9,6 +9,7 @@
 - 認証必須
 - 自分が参加したハンドのみ
 - `limit` 最大100
+- `excludePreflopFolds=true` を指定すると、heroがpreflopでfoldしたハンドを除外
 
 ## 履歴保存 (API)
 - `POST /api/history`
@@ -21,7 +22,11 @@
 - mode, maxPlayers, buttonSeat, sbSeat, bbSeat
 - stakes, initialStacks, finalStacks
 - boardCards, actions, result, roomSnapshot
-- participants[]: seat, userId, username, holeCards, foldedStreet, netResultBB など
+- participants[]: seat, userId, username, holeCards, showedHoleCards, foldedStreet, netResultBB など
+
+## showedHoleCards
+- ショーダウンでカードを公開したかのフラグ
+- autoMuckWhenLosing 有効時は、負け確定プレイヤーが `false` で保存される
 
 ## フロントのハンド変換
 - `boardCards` を flop/turn/riverに分解
