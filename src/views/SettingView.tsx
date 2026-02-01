@@ -45,7 +45,7 @@ export default function SettingView({
   onBack,
   onUserUpdated,
 }: Props) {
-  const [autoMuckWhenLosing, setAutoMuckWhenLosing] = useState(false);
+  const [autoMuckWhenLosing, setAutoMuckWhenLosing] = useState(true);
   const [historyExcludePreflopFolds, setHistoryExcludePreflopFolds] = useState(false);
   const [stackDisplay, setStackDisplay] = useState<"chips" | "blinds">("blinds");
   const [saving, setSaving] = useState(false);
