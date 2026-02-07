@@ -34,6 +34,12 @@ function TopView({
           Online Rooms
         </button>
       )}
+      <button
+        onClick={onViewHands}
+        className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
+      >
+        View Hands
+      </button>
       {onSettings && (
         <button
           onClick={onSettings}
@@ -42,12 +48,6 @@ function TopView({
           Setting
         </button>
       )}
-      <button
-        onClick={onViewHands}
-        className="px-5 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-sm font-semibold shadow transition-colors"
-      >
-        View Hands
-      </button>
       {isLoggedIn ? (
         <button
           onClick={onLogoutRequest}
