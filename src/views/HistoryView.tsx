@@ -6,6 +6,8 @@ type Props = {
   onSelectHand: (h: HandRecord) => void;
   username?: string;
   onBack: () => void;
+  onArchive?: (h: HandRecord) => void;
+  isLoggedIn?: boolean;
   page: number;
   hasNext: boolean;
   onPrev: () => void;
@@ -17,6 +19,8 @@ function HistoryView({
   onSelectHand,
   username,
   onBack,
+  onArchive,
+  isLoggedIn = false,
   page,
   hasNext,
   onPrev,
@@ -124,20 +128,31 @@ function HistoryView({
           <p className="text-sm text-slate-300">No hands recorded yet.</p>
         ) : (
           history.map((h) => (
-            <button
+            <div
               key={h.handId}
-              onClick={() => onSelectHand(h)}
-              className="w-full text-left border border-slate-700 rounded-md px-3 py-2 bg-slate-800/60 hover:border-emerald-400 transition-colors shadow"
+              className="w-full border border-slate-700 rounded-md px-3 py-2 bg-slate-800/60 hover:border-emerald-400 transition-colors shadow"
             >
-              <div className="text-sm font-semibold truncate">
-                Hand: <span className="text-emerald-300">{h.handId}</span>
-              </div>
-              <div className="text-xs text-slate-300">
-                BTN: {h.btnIndex} / Pot: {h.pot ?? 0} BB / Winners:{" "}
-                {h.winners?.length ? h.winners.map((w) => `P${w + 1}`).join(", ") : "-"}
-              </div>
-              {renderPreview(h)}
-            </button>
+              <button onClick={() => onSelectHand(h)} className="w-full text-left">
+                <div className="text-sm font-semibold truncate">
+                  Hand: <span className="text-emerald-300">{h.handId}</span>
+                </div>
+                <div className="text-xs text-slate-300">
+                  BTN: {h.btnIndex} / Pot: {h.pot ?? 0} BB / Winners:{" "}
+                  {h.winners?.length ? h.winners.map((w) => `P${w + 1}`).join(", ") : "-"}
+                </div>
+                {renderPreview(h)}
+              </button>
+              {isLoggedIn && onArchive && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => onArchive(h)}
+                    className="px-3 py-1 rounded bg-sky-600 hover:bg-sky-500 text-xs font-semibold"
+                  >
+                    Archive
+                  </button>
+                </div>
+              )}
+            </div>
           ))
         )}
       </div>

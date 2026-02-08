@@ -13,9 +13,13 @@ import RoomListView from "./views/RoomListView.js";
 import RoomDetailView from "./views/RoomDetailView.js";
 import RoomGameView from "./views/RoomGameView.js";
 import SettingView from "./views/SettingView.js";
+import ArchiveListView from "./views/ArchiveListView.js";
+import ArchiveDetailView from "./views/ArchiveDetailView.js";
+import ArchiveCreateView from "./views/ArchiveCreateView.js";
 import { useHandHistory } from "./hooks/useHandHistory.js";
 import { useAuth } from "./hooks/useAuth.js";
 import type { HandRecord } from "./game/history/recorder.js";
+import { getArchiveByHand } from "./api/archive.js";
 
 function App() {
   type ViewMode =
@@ -24,6 +28,9 @@ function App() {
     | "replay"
     | "account"
     | "setting"
+    | "archiveList"
+    | "archiveDetail"
+    | "archiveCreate"
     | "login"
     | "register"
     | "username"
@@ -38,6 +45,16 @@ function App() {
   const [view, setView] = useState<ViewMode>("top");
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
+  const [archivePostId, setArchivePostId] = useState<string | null>(null);
+  const [archiveHandId, setArchiveHandId] = useState<string | null>(null);
+  const [archiveEdit, setArchiveEdit] = useState<{
+    postId: string;
+    title?: string;
+    privateNote?: string;
+    fixedTags?: string[];
+    freeTags?: string[];
+    focusPoint?: string | null;
+  } | null>(null);
   const [settings, setSettings] = useState<{
     autoMuckWhenLosing: boolean;
     historyExcludePreflopFolds: boolean;
@@ -105,6 +122,20 @@ function App() {
     setView("replay");
   };
 
+  const handleArchiveFromHistory = async (record: HandRecord) => {
+    if (!record.handId) return;
+    try {
+      const res = await getArchiveByHand(apiBase, record.handId);
+      setArchivePostId(res.postId);
+      setView("archiveDetail");
+    } catch (e: any) {
+      // 404 -> create
+      setArchiveHandId(record.handId);
+      setArchiveEdit(null);
+      setView("archiveCreate");
+    }
+  };
+
   if (!authReady) {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex items-center justify-center">
@@ -123,6 +154,7 @@ function App() {
         username={auth.user?.username}
         onRooms={() => setView("roomList")}
         onSettings={isLoggedIn ? () => setView("setting") : undefined}
+        onArchives={() => setView("archiveList")}
       />
     );
   }
@@ -179,6 +211,8 @@ function App() {
         history={history}
         username={auth.user?.username}
         onSelectHand={startReplay}
+        onArchive={isLoggedIn ? handleArchiveFromHistory : undefined}
+        isLoggedIn={isLoggedIn}
         onBack={() => setView("top")}
         page={historyPage}
         hasNext={hasNext}
@@ -196,6 +230,63 @@ function App() {
 
   if (view === "replay" && replayRecord) {
     return <ReplayView record={replayRecord} onBack={() => setView("history")} />;
+  }
+
+  if (view === "archiveList") {
+    return (
+      <ArchiveListView
+        apiBase={apiBase}
+        onOpen={(id) => {
+          setArchivePostId(id);
+          setView("archiveDetail");
+        }}
+        onBack={() => setView("top")}
+        isLoggedIn={isLoggedIn}
+      />
+    );
+  }
+
+  if (view === "archiveDetail" && archivePostId) {
+    return (
+      <ArchiveDetailView
+        apiBase={apiBase}
+        postId={archivePostId}
+        isLoggedIn={isLoggedIn}
+        onBack={() => setView("archiveList")}
+        onEdit={(detail) => {
+          setArchiveEdit({
+            postId: detail.postId,
+            title: detail.title,
+            privateNote: detail.privateNote ?? undefined,
+            fixedTags: detail.authorTags.fixed,
+            freeTags: detail.authorTags.free,
+            focusPoint: detail.focusPoint ?? null,
+          });
+          setArchiveHandId(detail.handReplay?.handId ?? null);
+          setView("archiveCreate");
+        }}
+      />
+    );
+  }
+
+  if (view === "archiveCreate") {
+    const handId = archiveHandId ?? "";
+    return (
+      <ArchiveCreateView
+        apiBase={apiBase}
+        handId={handId}
+        editPostId={archiveEdit?.postId}
+        initial={archiveEdit ?? undefined}
+        onCreated={(postId) => {
+          setArchivePostId(postId);
+          setView("archiveDetail");
+        }}
+        onBack={() => {
+          if (archivePostId) setView("archiveDetail");
+          else setView("archiveList");
+        }}
+      />
+    );
   }
 
   if (view === "account" && auth.user) {
