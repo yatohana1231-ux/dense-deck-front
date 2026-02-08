@@ -13,7 +13,6 @@ import RoomListView from "./views/RoomListView.js";
 import RoomDetailView from "./views/RoomDetailView.js";
 import RoomGameView from "./views/RoomGameView.js";
 import SettingView from "./views/SettingView.js";
-import ArchiveListView from "./views/ArchiveListView.js";
 import ArchiveDetailView from "./views/ArchiveDetailView.js";
 import ArchiveCreateView from "./views/ArchiveCreateView.js";
 import { useHandHistory } from "./hooks/useHandHistory.js";
@@ -28,7 +27,6 @@ function App() {
     | "replay"
     | "account"
     | "setting"
-    | "archiveList"
     | "archiveDetail"
     | "archiveCreate"
     | "login"
@@ -45,6 +43,7 @@ function App() {
   const [view, setView] = useState<ViewMode>("top");
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyTab, setHistoryTab] = useState<"history" | "archives" | "museum">("history");
   const [archivePostId, setArchivePostId] = useState<string | null>(null);
   const [archiveHandId, setArchiveHandId] = useState<string | null>(null);
   const [archiveEdit, setArchiveEdit] = useState<{
@@ -75,7 +74,7 @@ function App() {
     }
   }, [authReady]);
 
-  const shouldLoadHistory = view === "history";
+  const shouldLoadHistory = view === "history" && historyTab === "history";
   const { history, refresh: refreshHistory } = useHandHistory(
     shouldLoadHistory,
     20,
@@ -154,7 +153,6 @@ function App() {
         username={auth.user?.username}
         onRooms={() => setView("roomList")}
         onSettings={isLoggedIn ? () => setView("setting") : undefined}
-        onArchives={() => setView("archiveList")}
       />
     );
   }
@@ -208,6 +206,7 @@ function App() {
     const hasNext = history.length === 20;
     return (
       <HistoryView
+        apiBase={apiBase}
         history={history}
         username={auth.user?.username}
         onSelectHand={startReplay}
@@ -224,6 +223,12 @@ function App() {
           setHistoryPage((p) => p + 1);
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
+        tab={historyTab}
+        onTabChange={(t) => setHistoryTab(t)}
+        onOpenArchive={(postId) => {
+          setArchivePostId(postId);
+          setView("archiveDetail");
+        }}
       />
     );
   }
@@ -232,27 +237,13 @@ function App() {
     return <ReplayView record={replayRecord} onBack={() => setView("history")} />;
   }
 
-  if (view === "archiveList") {
-    return (
-      <ArchiveListView
-        apiBase={apiBase}
-        onOpen={(id) => {
-          setArchivePostId(id);
-          setView("archiveDetail");
-        }}
-        onBack={() => setView("top")}
-        isLoggedIn={isLoggedIn}
-      />
-    );
-  }
-
   if (view === "archiveDetail" && archivePostId) {
     return (
       <ArchiveDetailView
         apiBase={apiBase}
         postId={archivePostId}
         isLoggedIn={isLoggedIn}
-        onBack={() => setView("archiveList")}
+        onBack={() => setView("history")}
         onEdit={(detail) => {
           setArchiveEdit({
             postId: detail.postId,
@@ -283,7 +274,7 @@ function App() {
         }}
         onBack={() => {
           if (archivePostId) setView("archiveDetail");
-          else setView("archiveList");
+          else setView("history");
         }}
       />
     );
