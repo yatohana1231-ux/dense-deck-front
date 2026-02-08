@@ -47,3 +47,43 @@
 - auto_muck_when_losing
 - history_exclude_preflop_folds
 - stack_display
+
+## hand_archive_posts
+- post_id (PK)
+- hand_id (UNIQUE, FK)
+- author_user_id (FK)
+- title, private_note, status, focus_point
+- created_at, updated_at
+- views_total, views_unique, dwell_ms_total, dwell_ms_avg
+
+## hand_archive_post_fixed_tags
+- post_id (FK)
+- tag_key
+
+## hand_archive_post_free_tags
+- post_id (FK)
+- tag_text
+- tag_norm
+
+## hand_archive_likes
+- post_id (FK)
+- user_id (FK)
+- created_at
+
+## hand_archive_viewer_tags
+- post_id (FK)
+- user_id (FK)
+- tag_key
+- created_at
+
+## hand_archive_view_uniques
+- post_id (FK)
+- viewer_anon_id
+- created_at
+
+## hand_archive_view_sessions
+- session_id (PK)
+- post_id (FK)
+- viewer_anon_id
+- started_at, ended_at
+- dwell_ms

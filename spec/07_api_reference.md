@@ -38,6 +38,31 @@
 - GET `/api/settings`
 - PUT `/api/settings`
 
+## Gallery
+- GET `/api/gallery/tags`
+  - res: `{ authorFixedTags: [{ key, label }], viewerTags: [{ key, label }], focusPoints: [{ key, label }], lang }`
+- POST `/api/gallery/posts`
+  - req: `{ handId, title?, privateNote?, fixedTagKeys?, freeTags?, focusPoint? }`
+  - res: `{ postId }`
+- GET `/api/gallery/posts?tag=&page=&limit=`
+  - res: `{ items: [...] }` (各itemに`handReplay`を含む)
+- GET `/api/gallery/posts/by-hand/:handId`
+  - res: `{ postId }`
+- GET `/api/gallery/posts/:postId`
+  - res: `{ postId, title, authorTags, viewerTags, focusPoint, handReplay, createdAt, isOwner, status?, privateNote?, metrics? }`
+- PATCH `/api/gallery/posts/:postId`
+  - req: `{ title?, privateNote?, fixedTagKeys?, freeTags?, focusPoint? }`
+- POST `/api/gallery/posts/:postId/withdraw`
+- POST `/api/gallery/posts/:postId/like`
+- DELETE `/api/gallery/posts/:postId/like`
+- PUT `/api/gallery/posts/:postId/viewer-tags`
+  - req: `{ tagKeys: string[] }`
+- POST `/api/gallery/posts/:postId/view/start`
+  - req: `{ viewerAnonId? }`
+  - res: `{ viewSessionId }`
+- POST `/api/gallery/posts/:postId/view/end`
+  - req: `{ viewSessionId, dwellMs }`
+
 ## WebSocket
 - WS `/ws/rooms`
   - res: `{ type: "rooms", rooms: [...] }`
