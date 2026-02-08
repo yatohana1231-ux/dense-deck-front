@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { GalleryListItem } from "../api/gallery.js";
 import { getGalleryTags, listGalleryPosts } from "../api/gallery.js";
+import HandCard from "./HandCard.js";
+import { mapReplayToRecord } from "./handReplayToRecord.js";
 
 type Props = {
   apiBase: string;
@@ -71,22 +73,38 @@ export default function GalleryListView({ apiBase, onOpen, onCreate, onBack, isL
         </select>
       </div>
 
-      <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 divide-y divide-slate-700">
+      <div className="w-full max-w-5xl flex flex-col gap-3">
         {loading && <div className="p-4 text-sm text-slate-400">Loading...</div>}
         {!loading && items.length === 0 && (
           <div className="p-6 text-sm text-slate-400 text-center">No gallery posts</div>
         )}
         {items.map((p) => (
-          <button
-            key={p.postId}
-            onClick={() => onOpen(p.postId)}
-            className="w-full text-left px-4 py-3 hover:bg-slate-800 transition"
-          >
-            <div className="font-semibold">{p.title || "(untitled)"}</div>
-            <div className="text-xs text-slate-400">
-              Tags: {p.authorTags.fixed.join(", ") || "-"} / Focus: {p.focusPoint ?? "-"}
-            </div>
-          </button>
+          (() => {
+            const record = mapReplayToRecord(p.handReplay);
+            if (!record) {
+              return (
+                <div
+                  key={p.postId}
+                  className="w-full border border-slate-700 rounded-md px-3 py-2 bg-slate-800/60 shadow"
+                >
+                  <div className="text-sm font-semibold truncate">{p.title || "(untitled)"}</div>
+                  <div className="text-xs text-slate-400">Hand data unavailable</div>
+                </div>
+              );
+            }
+            return (
+              <HandCard
+                key={p.postId}
+                record={record}
+                onClick={() => onOpen(p.postId)}
+                footer={
+                  <div className="text-xs text-slate-400">
+                    Tags: {p.authorTags.fixed.join(", ") || "-"} / Focus: {p.focusPoint ?? "-"}
+                  </div>
+                }
+              />
+            );
+          })()
         ))}
       </div>
 

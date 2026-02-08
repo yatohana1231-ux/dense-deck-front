@@ -1,10 +1,12 @@
 export type GalleryListItem = {
   postId: string;
+  handId: string;
   title: string;
   authorTags: { fixed: string[]; free: string[] };
   viewerTags: { public: string[] };
   focusPoint: string | null;
   createdAt: string;
+  handReplay?: any;
 };
 
 export type GalleryListResponse = { items: GalleryListItem[] };
