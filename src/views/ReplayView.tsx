@@ -300,7 +300,7 @@ function ReplayView({ record, onBack }: Props) {
               {isEmpty ? (
                 <div className="flex flex-col items-center gap-2">
                   <div className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-700/40 text-slate-400">
-                    {positionLabel(seatIdx, table.btnIndex)}
+                    Empty
                   </div>
                   <div className="w-24 h-28 rounded-xl border border-slate-700 bg-slate-800/30" />
                 </div>
@@ -331,12 +331,4 @@ function ReplayView({ record, onBack }: Props) {
 }
 
 export default ReplayView;
-
-function positionLabel(playerIndex: number, btnIndex: number) {
-  const n = 4;
-  if (playerIndex === btnIndex) return "BTN";
-  if (playerIndex === (btnIndex + 1) % n) return "BB";
-  if (playerIndex === (btnIndex + 2) % n) return "UTG";
-  return "CO";
-}
 

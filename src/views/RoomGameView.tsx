@@ -621,11 +621,11 @@ export default function RoomGameView({
                     isEmpty ? "bg-slate-700/40 text-slate-400" : "bg-slate-700 text-slate-100"
                   }`}
                 >
-                  {seat ? seat.username : positionLabel(seatIdx, table?.btnIndex ?? 0)}
+                  {seat ? seat.username : "Empty"}
                 </div>
                 {player ? (
                   <Seat
-                    label={positionLabel(seatIdx, table?.btnIndex ?? 0)}
+                    label={positionLabel(seatIdx, table?.btnIndex ?? 0, table?.game?.players?.length ?? 4)}
                     hand={player.hand ?? []}
                     player={player}
                     isWinner={isWinner}
@@ -711,8 +711,16 @@ export default function RoomGameView({
   );
 }
 
-function positionLabel(playerIndex: number, btnIndex: number) {
-  const n = 4;
+function positionLabel(playerIndex: number, btnIndex: number, playerCount: number) {
+  if (playerCount <= 2) {
+    return playerIndex === btnIndex ? "BTN" : "BB";
+  }
+  if (playerCount === 3) {
+    if (playerIndex === btnIndex) return "BTN";
+    if (playerIndex === (btnIndex + 1) % playerCount) return "UTG";
+    return "BB";
+  }
+  const n = playerCount;
   if (playerIndex === btnIndex) return "BTN";
   if (playerIndex === (btnIndex + 1) % n) return "BB";
   if (playerIndex === (btnIndex + 2) % n) return "UTG";
