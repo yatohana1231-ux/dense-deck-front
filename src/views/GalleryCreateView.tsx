@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ArchiveTags } from "../api/archive.js";
-import { createArchivePost, getArchiveTags, updateArchivePost } from "../api/archive.js";
+import type { GalleryTags } from "../api/gallery.js";
+import { createGalleryPost, getGalleryTags, updateGalleryPost } from "../api/gallery.js";
 
 type Props = {
   apiBase: string;
@@ -17,7 +17,7 @@ type Props = {
   };
 };
 
-export default function ArchiveCreateView({
+export default function GalleryCreateView({
   apiBase,
   handId,
   onCreated,
@@ -25,7 +25,7 @@ export default function ArchiveCreateView({
   editPostId,
   initial,
 }: Props) {
-  const [tags, setTags] = useState<ArchiveTags | null>(null);
+  const [tags, setTags] = useState<GalleryTags | null>(null);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [privateNote, setPrivateNote] = useState(initial?.privateNote ?? "");
   const [fixedTagKeys, setFixedTagKeys] = useState<string[]>(initial?.fixedTags ?? []);
@@ -35,7 +35,7 @@ export default function ArchiveCreateView({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getArchiveTags(apiBase).then(setTags).catch(() => {});
+    getGalleryTags(apiBase).then(setTags).catch(() => {});
   }, [apiBase]);
 
   const fixedTags = tags?.authorFixedTags ?? [];
@@ -67,7 +67,7 @@ export default function ArchiveCreateView({
         focusPoint: focusPoint || null,
       };
       if (editPostId) {
-        await updateArchivePost(apiBase, editPostId, {
+        await updateGalleryPost(apiBase, editPostId, {
           title: payload.title,
           privateNote: payload.privateNote,
           fixedTagKeys: payload.fixedTagKeys,
@@ -75,7 +75,7 @@ export default function ArchiveCreateView({
         });
         onCreated(editPostId);
       } else {
-        const res = (await createArchivePost(apiBase, payload)) as { postId: string };
+        const res = (await createGalleryPost(apiBase, payload)) as { postId: string };
         onCreated(res.postId);
       }
     } catch (e: any) {
@@ -89,7 +89,7 @@ export default function ArchiveCreateView({
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
       <div className="w-full max-w-4xl flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{editPostId ? "Edit Archive" : "Create Archive"}</h1>
+        <h1 className="text-2xl font-bold">{editPostId ? "Edit Gallery" : "Create Gallery"}</h1>
         <button
           onClick={onBack}
           className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"

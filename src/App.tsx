@@ -13,12 +13,12 @@ import RoomListView from "./views/RoomListView.js";
 import RoomDetailView from "./views/RoomDetailView.js";
 import RoomGameView from "./views/RoomGameView.js";
 import SettingView from "./views/SettingView.js";
-import ArchiveDetailView from "./views/ArchiveDetailView.js";
-import ArchiveCreateView from "./views/ArchiveCreateView.js";
+import GalleryDetailView from "./views/GalleryDetailView.js";
+import GalleryCreateView from "./views/GalleryCreateView.js";
 import { useHandHistory } from "./hooks/useHandHistory.js";
 import { useAuth } from "./hooks/useAuth.js";
 import type { HandRecord } from "./game/history/recorder.js";
-import { getArchiveByHand } from "./api/archive.js";
+import { getGalleryByHand } from "./api/gallery.js";
 
 function App() {
   type ViewMode =
@@ -27,8 +27,8 @@ function App() {
     | "replay"
     | "account"
     | "setting"
-    | "archiveDetail"
-    | "archiveCreate"
+    | "galleryDetail"
+    | "galleryCreate"
     | "login"
     | "register"
     | "username"
@@ -43,10 +43,10 @@ function App() {
   const [view, setView] = useState<ViewMode>("top");
   const [replayRecord, setReplayRecord] = useState<HandRecord | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyTab, setHistoryTab] = useState<"history" | "archives" | "museum">("history");
-  const [archivePostId, setArchivePostId] = useState<string | null>(null);
-  const [archiveHandId, setArchiveHandId] = useState<string | null>(null);
-  const [archiveEdit, setArchiveEdit] = useState<{
+  const [historyTab, setHistoryTab] = useState<"history" | "gallery" | "museum">("history");
+  const [galleryPostId, setGalleryPostId] = useState<string | null>(null);
+  const [galleryHandId, setGalleryHandId] = useState<string | null>(null);
+  const [galleryEdit, setGalleryEdit] = useState<{
     postId: string;
     title?: string;
     privateNote?: string;
@@ -121,17 +121,17 @@ function App() {
     setView("replay");
   };
 
-  const handleArchiveFromHistory = async (record: HandRecord) => {
+  const handleGalleryFromHistory = async (record: HandRecord) => {
     if (!record.handId) return;
     try {
-      const res = await getArchiveByHand(apiBase, record.handId);
-      setArchivePostId(res.postId);
-      setView("archiveDetail");
+      const res = await getGalleryByHand(apiBase, record.handId);
+      setGalleryPostId(res.postId);
+      setView("galleryDetail");
     } catch (e: any) {
       // 404 -> create
-      setArchiveHandId(record.handId);
-      setArchiveEdit(null);
-      setView("archiveCreate");
+      setGalleryHandId(record.handId);
+      setGalleryEdit(null);
+      setView("galleryCreate");
     }
   };
 
@@ -210,7 +210,7 @@ function App() {
         history={history}
         username={auth.user?.username}
         onSelectHand={startReplay}
-        onArchive={isLoggedIn ? handleArchiveFromHistory : undefined}
+        onGallery={isLoggedIn ? handleGalleryFromHistory : undefined}
         isLoggedIn={isLoggedIn}
         onBack={() => setView("top")}
         page={historyPage}
@@ -225,9 +225,9 @@ function App() {
         }}
         tab={historyTab}
         onTabChange={(t) => setHistoryTab(t)}
-        onOpenArchive={(postId) => {
-          setArchivePostId(postId);
-          setView("archiveDetail");
+        onOpenGallery={(postId) => {
+          setGalleryPostId(postId);
+          setView("galleryDetail");
         }}
       />
     );
@@ -237,15 +237,15 @@ function App() {
     return <ReplayView record={replayRecord} onBack={() => setView("history")} />;
   }
 
-  if (view === "archiveDetail" && archivePostId) {
+  if (view === "galleryDetail" && galleryPostId) {
     return (
-      <ArchiveDetailView
+      <GalleryDetailView
         apiBase={apiBase}
-        postId={archivePostId}
+        postId={galleryPostId}
         isLoggedIn={isLoggedIn}
         onBack={() => setView("history")}
         onEdit={(detail) => {
-          setArchiveEdit({
+          setGalleryEdit({
             postId: detail.postId,
             title: detail.title,
             privateNote: detail.privateNote ?? undefined,
@@ -253,27 +253,27 @@ function App() {
             freeTags: detail.authorTags.free,
             focusPoint: detail.focusPoint ?? null,
           });
-          setArchiveHandId(detail.handReplay?.handId ?? null);
-          setView("archiveCreate");
+          setGalleryHandId(detail.handReplay?.handId ?? null);
+          setView("galleryCreate");
         }}
       />
     );
   }
 
-  if (view === "archiveCreate") {
-    const handId = archiveHandId ?? "";
+  if (view === "galleryCreate") {
+    const handId = galleryHandId ?? "";
     return (
-      <ArchiveCreateView
+      <GalleryCreateView
         apiBase={apiBase}
         handId={handId}
-        editPostId={archiveEdit?.postId}
-        initial={archiveEdit ?? undefined}
+        editPostId={galleryEdit?.postId}
+        initial={galleryEdit ?? undefined}
         onCreated={(postId) => {
-          setArchivePostId(postId);
-          setView("archiveDetail");
+          setGalleryPostId(postId);
+          setView("galleryDetail");
         }}
         onBack={() => {
-          if (archivePostId) setView("archiveDetail");
+          if (galleryPostId) setView("galleryDetail");
           else setView("history");
         }}
       />

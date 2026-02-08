@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ArchiveDetail, ArchiveTags } from "../api/archive.js";
+import type { GalleryDetail, GalleryTags } from "../api/gallery.js";
 import {
-  getArchiveDetail,
-  getArchiveTags,
-  likeArchivePost,
-  unlikeArchivePost,
+  getGalleryDetail,
+  getGalleryTags,
+  likeGalleryPost,
+  unlikeGalleryPost,
   updateViewerTags,
-  withdrawArchivePost,
+  withdrawGalleryPost,
   viewEnd,
   viewStart,
-} from "../api/archive.js";
+} from "../api/gallery.js";
 import type { HandRecord } from "../game/history/recorder.js";
 import ReplayView from "./ReplayView.js";
 import { getViewerAnonId } from "../utils/viewerAnonId.js";
@@ -19,7 +19,7 @@ type Props = {
   postId: string;
   isLoggedIn: boolean;
   onBack: () => void;
-  onEdit: (detail: ArchiveDetail) => void;
+  onEdit: (detail: GalleryDetail) => void;
 };
 
 function mapReplayToRecord(replay: any): HandRecord | null {
@@ -64,15 +64,15 @@ function mapReplayToRecord(replay: any): HandRecord | null {
   return null;
 }
 
-export default function ArchiveDetailView({
+export default function GalleryDetailView({
   apiBase,
   postId,
   isLoggedIn,
   onBack,
   onEdit,
 }: Props) {
-  const [detail, setDetail] = useState<ArchiveDetail | null>(null);
-  const [tags, setTags] = useState<ArchiveTags | null>(null);
+  const [detail, setDetail] = useState<GalleryDetail | null>(null);
+  const [tags, setTags] = useState<GalleryTags | null>(null);
   const [like, setLike] = useState(false);
   const [loading, setLoading] = useState(true);
   const viewSessionRef = useRef<string | null>(null);
@@ -81,7 +81,7 @@ export default function ArchiveDetailView({
   const load = async () => {
     setLoading(true);
     try {
-      const d = await getArchiveDetail(apiBase, postId);
+      const d = await getGalleryDetail(apiBase, postId);
       setDetail(d);
     } finally {
       setLoading(false);
@@ -90,7 +90,7 @@ export default function ArchiveDetailView({
 
   useEffect(() => {
     load();
-    getArchiveTags(apiBase).then(setTags).catch(() => {});
+    getGalleryTags(apiBase).then(setTags).catch(() => {});
   }, [apiBase, postId]);
 
   useEffect(() => {
@@ -121,10 +121,10 @@ export default function ArchiveDetailView({
   const toggleLike = async () => {
     if (!isLoggedIn || detail?.isOwner) return;
     if (like) {
-      await unlikeArchivePost(apiBase, postId);
+      await unlikeGalleryPost(apiBase, postId);
       setLike(false);
     } else {
-      await likeArchivePost(apiBase, postId);
+      await likeGalleryPost(apiBase, postId);
       setLike(true);
     }
   };
@@ -148,7 +148,7 @@ export default function ArchiveDetailView({
   };
 
   const withdraw = async () => {
-    await withdrawArchivePost(apiBase, postId);
+    await withdrawGalleryPost(apiBase, postId);
     onBack();
   };
 
@@ -163,7 +163,7 @@ export default function ArchiveDetailView({
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
       <div className="w-full max-w-5xl flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Archive Detail</h1>
+        <h1 className="text-2xl font-bold">Gallery Detail</h1>
         <div className="flex gap-2">
           {detail.isOwner && (
             <button

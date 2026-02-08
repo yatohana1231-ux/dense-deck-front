@@ -1,4 +1,4 @@
-export type ArchiveListItem = {
+export type GalleryListItem = {
   postId: string;
   title: string;
   authorTags: { fixed: string[]; free: string[] };
@@ -7,9 +7,9 @@ export type ArchiveListItem = {
   createdAt: string;
 };
 
-export type ArchiveListResponse = { items: ArchiveListItem[] };
+export type GalleryListResponse = { items: GalleryListItem[] };
 
-export type ArchiveDetail = {
+export type GalleryDetail = {
   postId: string;
   title: string;
   authorTags: { fixed: string[]; free: string[] };
@@ -29,7 +29,7 @@ export type ArchiveDetail = {
   };
 };
 
-export type ArchiveTags = {
+export type GalleryTags = {
   authorFixedTags: Array<{ key: string; label: string }>;
   viewerTags: Array<{ key: string; label: string }>;
   focusPoints: Array<{ key: string; label: string }>;
@@ -51,28 +51,28 @@ async function fetchJson(url: string, opts?: RequestInit) {
   return text ? JSON.parse(text) : null;
 }
 
-export async function getArchiveTags(apiBase: string) {
-  return (await fetchJson(`${apiBase}/api/archive/tags`)) as ArchiveTags;
+export async function getGalleryTags(apiBase: string) {
+  return (await fetchJson(`${apiBase}/api/gallery/tags`)) as GalleryTags;
 }
 
-export async function listArchivePosts(apiBase: string, params: { tag?: string; page?: number; limit?: number }) {
+export async function listGalleryPosts(apiBase: string, params: { tag?: string; page?: number; limit?: number }) {
   const qp = new URLSearchParams();
   if (params.tag) qp.set("tag", params.tag);
   if (params.page) qp.set("page", String(params.page));
   if (params.limit) qp.set("limit", String(params.limit));
-  const url = `${apiBase}/api/archive/posts${qp.toString() ? `?${qp}` : ""}`;
-  return (await fetchJson(url)) as ArchiveListResponse;
+  const url = `${apiBase}/api/gallery/posts${qp.toString() ? `?${qp}` : ""}`;
+  return (await fetchJson(url)) as GalleryListResponse;
 }
 
-export async function getArchiveDetail(apiBase: string, postId: string) {
-  return (await fetchJson(`${apiBase}/api/archive/posts/${postId}`)) as ArchiveDetail;
+export async function getGalleryDetail(apiBase: string, postId: string) {
+  return (await fetchJson(`${apiBase}/api/gallery/posts/${postId}`)) as GalleryDetail;
 }
 
-export async function getArchiveByHand(apiBase: string, handId: string) {
-  return (await fetchJson(`${apiBase}/api/archive/posts/by-hand/${handId}`)) as { postId: string };
+export async function getGalleryByHand(apiBase: string, handId: string) {
+  return (await fetchJson(`${apiBase}/api/gallery/posts/by-hand/${handId}`)) as { postId: string };
 }
 
-export async function createArchivePost(
+export async function createGalleryPost(
   apiBase: string,
   payload: {
     handId: string;
@@ -83,14 +83,14 @@ export async function createArchivePost(
     focusPoint?: string | null;
   }
 ) {
-  return await fetchJson(`${apiBase}/api/archive/posts`, {
+  return await fetchJson(`${apiBase}/api/gallery/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export async function updateArchivePost(
+export async function updateGalleryPost(
   apiBase: string,
   postId: string,
   payload: {
@@ -100,27 +100,27 @@ export async function updateArchivePost(
     freeTags?: string[];
   }
 ) {
-  return await fetchJson(`${apiBase}/api/archive/posts/${postId}`, {
+  return await fetchJson(`${apiBase}/api/gallery/posts/${postId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export async function withdrawArchivePost(apiBase: string, postId: string) {
-  return await fetchJson(`${apiBase}/api/archive/posts/${postId}/withdraw`, { method: "POST" });
+export async function withdrawGalleryPost(apiBase: string, postId: string) {
+  return await fetchJson(`${apiBase}/api/gallery/posts/${postId}/withdraw`, { method: "POST" });
 }
 
-export async function likeArchivePost(apiBase: string, postId: string) {
-  return await fetchJson(`${apiBase}/api/archive/posts/${postId}/like`, { method: "POST" });
+export async function likeGalleryPost(apiBase: string, postId: string) {
+  return await fetchJson(`${apiBase}/api/gallery/posts/${postId}/like`, { method: "POST" });
 }
 
-export async function unlikeArchivePost(apiBase: string, postId: string) {
-  return await fetchJson(`${apiBase}/api/archive/posts/${postId}/like`, { method: "DELETE" });
+export async function unlikeGalleryPost(apiBase: string, postId: string) {
+  return await fetchJson(`${apiBase}/api/gallery/posts/${postId}/like`, { method: "DELETE" });
 }
 
 export async function updateViewerTags(apiBase: string, postId: string, tagKeys: string[]) {
-  return await fetchJson(`${apiBase}/api/archive/posts/${postId}/viewer-tags`, {
+  return await fetchJson(`${apiBase}/api/gallery/posts/${postId}/viewer-tags`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tagKeys }),
@@ -128,7 +128,7 @@ export async function updateViewerTags(apiBase: string, postId: string, tagKeys:
 }
 
 export async function viewStart(apiBase: string, postId: string, viewerAnonId?: string) {
-  return (await fetchJson(`${apiBase}/api/archive/posts/${postId}/view/start`, {
+  return (await fetchJson(`${apiBase}/api/gallery/posts/${postId}/view/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(viewerAnonId ? { viewerAnonId } : {}),
@@ -136,7 +136,7 @@ export async function viewStart(apiBase: string, postId: string, viewerAnonId?: 
 }
 
 export async function viewEnd(apiBase: string, postId: string, viewSessionId: string, dwellMs: number) {
-  return await fetchJson(`${apiBase}/api/archive/posts/${postId}/view/end`, {
+  return await fetchJson(`${apiBase}/api/gallery/posts/${postId}/view/end`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ viewSessionId, dwellMs }),

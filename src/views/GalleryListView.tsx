@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { ArchiveListItem } from "../api/archive.js";
-import { getArchiveTags, listArchivePosts } from "../api/archive.js";
+import type { GalleryListItem } from "../api/gallery.js";
+import { getGalleryTags, listGalleryPosts } from "../api/gallery.js";
 
 type Props = {
   apiBase: string;
@@ -10,22 +10,22 @@ type Props = {
   isLoggedIn: boolean;
 };
 
-export default function ArchiveListView({ apiBase, onOpen, onCreate, onBack, isLoggedIn }: Props) {
-  const [items, setItems] = useState<ArchiveListItem[]>([]);
+export default function GalleryListView({ apiBase, onOpen, onCreate, onBack, isLoggedIn }: Props) {
+  const [items, setItems] = useState<GalleryListItem[]>([]);
   const [tagFilter, setTagFilter] = useState<string>("");
   const [tags, setTags] = useState<Array<{ key: string; label: string }>>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getArchiveTags(apiBase)
+    getGalleryTags(apiBase)
       .then((data) => setTags(data.authorFixedTags ?? []))
       .catch(() => {});
   }, [apiBase]);
 
   useEffect(() => {
     setLoading(true);
-    listArchivePosts(apiBase, { tag: tagFilter || undefined, page, limit: 20 })
+    listGalleryPosts(apiBase, { tag: tagFilter || undefined, page, limit: 20 })
       .then((res) => setItems(res.items ?? []))
       .finally(() => setLoading(false));
   }, [apiBase, tagFilter, page]);
@@ -33,7 +33,7 @@ export default function ArchiveListView({ apiBase, onOpen, onCreate, onBack, isL
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
       <div className="w-full max-w-5xl flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Hand Archives</h1>
+        <h1 className="text-2xl font-bold">Hand Gallery</h1>
         <div className="flex gap-2">
           {isLoggedIn && onCreate && (
             <button
@@ -74,7 +74,7 @@ export default function ArchiveListView({ apiBase, onOpen, onCreate, onBack, isL
       <div className="w-full max-w-5xl bg-slate-800/50 rounded-lg border border-slate-700 divide-y divide-slate-700">
         {loading && <div className="p-4 text-sm text-slate-400">Loading...</div>}
         {!loading && items.length === 0 && (
-          <div className="p-6 text-sm text-slate-400 text-center">No posts</div>
+          <div className="p-6 text-sm text-slate-400 text-center">No gallery posts</div>
         )}
         {items.map((p) => (
           <button
