@@ -23,7 +23,7 @@ export default function InfoBar({
       </div>
 
       <div className="text-sm">
-        Pot: <span className="font-semibold">{pot} BB</span>
+        Pot: <span className="font-semibold">{pot} points</span>
       </div>
 
       <button

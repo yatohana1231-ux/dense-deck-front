@@ -69,7 +69,7 @@ export default function Seat({
           )}
         </span>
         <span className="text-[10px] text-slate-300">
-          Stack: {player.stack} {stackDisplay === "blinds" ? "BB" : "chips"}
+          Stack: {player.stack} {stackDisplay === "blinds" ? "points" : "chips"}
         </span>
       </div>
 

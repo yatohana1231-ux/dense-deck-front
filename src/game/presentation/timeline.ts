@@ -12,7 +12,7 @@ export const PRESENTATION_DELAYS = {
 export function actionLabel(entry: ActionLogEntry): string {
   const amt = entry.amount ?? 0;
   if ((entry.kind === "bet" || entry.kind === "raise") && entry.stackAfter === 0) {
-    return amt > 0 ? `All-in ${amt}BB` : "All-in";
+    return amt > 0 ? `All-in ${amt}pt` : "All-in";
   }
   switch (entry.kind) {
     case "fold":
@@ -20,11 +20,11 @@ export function actionLabel(entry: ActionLogEntry): string {
     case "check":
       return "Check";
     case "call":
-      return amt > 0 ? `Call ${amt}BB` : "Call";
+      return amt > 0 ? `Call ${amt}pt` : "Call";
     case "bet":
-      return amt > 0 ? `Bet ${amt}BB` : "Bet";
+      return amt > 0 ? `Bet ${amt}pt` : "Bet";
     case "raise":
-      return amt > 0 ? `Raise ${amt}BB` : "Raise";
+      return amt > 0 ? `Raise ${amt}pt` : "Raise";
     default:
       return entry.kind;
   }

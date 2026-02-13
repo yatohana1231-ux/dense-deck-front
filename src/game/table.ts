@@ -106,7 +106,7 @@ export async function createInitialTable(
   const players: PlayerState[] = hands.map((h, i) => {
     const { bb } = getPositions(btnIndex, playerCount);
     const isBB = i === bb;
-    const posted = isBB ? 1 : 0; // BB=1BB
+    const posted = isBB ? 100 : 0; // 1BB = 100 points
     const stackAfterBlind = Math.max(initialStack - posted, 0);
     return {
       hand: h,
@@ -118,7 +118,7 @@ export async function createInitialTable(
   });
 
   const pot = players.reduce((acc, p) => acc + p.bet, 0);
-  const currentBet = 1; // BB posts 1BB
+  const currentBet = 100; // BB posts 100 points
   const firstActor = findFirstActiveInOrder(preflopOrder, players);
 
   const game: GameState = {
@@ -139,7 +139,7 @@ export async function createInitialTable(
     currentPlayer: firstActor,
     roundStarter: firstActor,
     lastAggressor: null,
-    lastRaise: 1, // BB posted 1BB
+    lastRaise: 100, // BB posted 100 points
     raiseBlocked: false,
     btnIndex,
     autoWin: null,
@@ -167,7 +167,7 @@ export function applyAction(
   let pot = game.pot;
   let currentBet = game.currentBet;
   let lastAggressor = gameState.lastAggressor;
-  let lastRaise = gameState.lastRaise ?? 1;
+  let lastRaise = gameState.lastRaise ?? 100;
   let raiseBlocked = gameState.raiseBlocked ?? false;
   let payAmount = 0;
 
@@ -199,7 +199,7 @@ export function applyAction(
         action.amount !== undefined ? Math.max(0, action.amount) : p.bet;
 
       if (currentBet === 0) {
-        const minBet = 1;
+        const minBet = 100;
         const targetTotal = Math.min(Math.max(desiredTotal, minBet), maxTotal);
         const pay = Math.max(0, targetTotal - p.bet);
         payAmount = pay;
@@ -212,7 +212,7 @@ export function applyAction(
         if (p.stack === 0) p.allIn = true;
         lastAggressor = playerIndex;
       } else {
-        const minRaiseTotal = Math.max(currentBet + lastRaise, currentBet + 1);
+        const minRaiseTotal = Math.max(currentBet + lastRaise, currentBet + 100);
         const targetTotal = Math.min(
           Math.max(desiredTotal, minRaiseTotal),
           maxTotal
@@ -334,7 +334,7 @@ export function advanceAfterAction(state: TableState): TableState {
         currentPlayer: firstActive,
         roundStarter: firstActive,
         lastAggressor: null,
-        lastRaise: 1,
+        lastRaise: 100,
         raiseBlocked: false,
         revealStreet: ns,
         autoWin: null,
@@ -363,7 +363,7 @@ export function advanceAfterAction(state: TableState): TableState {
       currentPlayer: firstActive,
       roundStarter: firstActive,
       lastAggressor: null,
-      lastRaise: 1,
+      lastRaise: 100,
       raiseBlocked: false,
       revealStreet: ns,
       autoWin: null,
@@ -404,11 +404,11 @@ export function makeActionLabel(
   if ((kind === "bet" || kind === "raise") && p.stack > 0) {
     const isAllIn = p.stack + p.bet <= table.game.currentBet || p.stack === 0;
     if (isAllIn) {
-      return `All-in (${p.stack}BB)`;
+      return `All-in (${p.stack}pt)`;
     }
   }
   if (wouldAllInCall) {
-    return `All-in (${p.stack}BB)`;
+    return `All-in (${p.stack}pt)`;
   }
 
   switch (kind) {
@@ -417,7 +417,7 @@ export function makeActionLabel(
     case "check":
       return "Check";
     case "call":
-      return `Call (${toCall}BB)`;
+      return `Call (${toCall}pt)`;
     case "bet":
       return "Bet";
     case "raise":

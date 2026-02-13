@@ -15,13 +15,13 @@ export default function BoardArea({ cards, pot, pots }: BoardAreaProps) {
   return (
     <div className="w-full max-w-[520px] h-32 rounded-2xl bg-emerald-900/80 border border-emerald-500 shadow-xl flex flex-col items-center justify-center px-3 py-2 gap-2">
       <div className="w-full flex justify-center">
-        <span className="text-xs text-emerald-100">Pot: {totalPot} BB</span>
+        <span className="text-xs text-emerald-100">Pot: {totalPot} points</span>
       </div>
       {sidePots.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-emerald-100">
-          <span>Main: {pots?.[0]?.amount ?? totalPot} BB</span>
+          <span>Main: {pots?.[0]?.amount ?? totalPot} points</span>
           {sidePots.map((p, idx) => (
-            <span key={`side-${idx}`}>Side {idx + 1}: {p.amount} BB</span>
+            <span key={`side-${idx}`}>Side {idx + 1}: {p.amount} points</span>
           ))}
         </div>
       )}

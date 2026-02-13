@@ -7,10 +7,10 @@ export type RoomSummary = {
   seats: any[];
   maxSeats: number;
   config: {
-    initialStackBB: number;
+    initialStackPoints: number;
     actionSeconds: number;
     reconnectGraceSeconds: number;
-    rebuyAmount: number;
+    rebuyPoints: number;
   };
   createdAt: number;
   btnIndex?: number;

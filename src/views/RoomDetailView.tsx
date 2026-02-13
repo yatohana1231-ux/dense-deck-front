@@ -107,10 +107,10 @@ export default function RoomDetailView({ apiBase, roomId, onBack, onEnterTable }
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-300">
-          <div>Initial Stack: {room?.config.initialStackBB ?? 0} BB</div>
+          <div>Initial Stack: {room?.config.initialStackPoints ?? 0} points</div>
           <div>Action Timer: {room?.config.actionSeconds ?? 0}s</div>
           <div>Reconnect Grace: {room?.config.reconnectGraceSeconds ?? 0}s</div>
-          <div>Rebuy: {room?.config.rebuyAmount ?? 0} BB</div>
+          <div>Rebuy: {room?.config.rebuyPoints ?? 0} points</div>
         </div>
         {neededPlayers > 0 && (
           <div className="mt-2 text-xs text-amber-300">

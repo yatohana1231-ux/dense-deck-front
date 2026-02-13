@@ -33,7 +33,7 @@ export default function HandCard({ record, onClick, footer, actions }: Props) {
         Hand: <span className="text-emerald-300">{record.handId}</span>
       </div>
       <div className="text-xs text-slate-300">
-        BTN: {record.btnIndex} / Pot: {record.pot ?? 0} BB / Winners:{" "}
+        BTN: {record.btnIndex} / Pot: {record.pot ?? 0} points / Winners:{" "}
         {record.winners?.length ? record.winners.map((w) => `P${w + 1}`).join(", ") : "-"}
       </div>
       <div className="mt-2 flex flex-col gap-2 text-xs text-slate-200">

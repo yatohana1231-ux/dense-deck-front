@@ -391,7 +391,7 @@ export default function RoomGameView({
   };
 
   const maxSeats = room?.maxSeats ?? 4;
-  const rebuyAmount = room?.config?.initialStackBB ?? 100;
+  const rebuyAmount = room?.config?.initialStackPoints ?? 10000;
   const showRebuyModal = !!(game?.handEnded && heroSeat && heroSeat.stack <= 0);
 
   // Seat order rotated so hero (if seated) is at bottom index (maxSeats - 1)
@@ -528,7 +528,7 @@ export default function RoomGameView({
                 readOnly
                 className="w-24 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-200 text-center"
               />
-              <span className="text-xs text-slate-300">BB</span>
+              <span className="text-xs text-slate-300">points</span>
             </div>
             <div className="mt-4 flex items-center justify-center gap-2">
               <button
@@ -735,9 +735,9 @@ function getActionContext(table: any, heroSeatIndex: number) {
   const lastRaise = table.lastRaise ?? 1;
   const toCall = Math.max(0, currentBet - (p.bet ?? 0));
   const maxTotal = (p.bet ?? 0) + (p.stack ?? 0);
-  const minBetTotal = Math.min(Math.max(1, p.bet ?? 0, currentBet), maxTotal);
+  const minBetTotal = Math.min(Math.max(100, p.bet ?? 0, currentBet), maxTotal);
   const minRaiseTotal = Math.min(
-    currentBet === 0 ? minBetTotal : Math.max(currentBet + lastRaise, currentBet + 1),
+    currentBet === 0 ? minBetTotal : Math.max(currentBet + lastRaise, currentBet + 100),
     maxTotal
   );
 
