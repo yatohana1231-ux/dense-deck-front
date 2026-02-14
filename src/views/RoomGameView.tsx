@@ -65,6 +65,7 @@ export default function RoomGameView({
   const [payoutApplied, setPayoutApplied] = useState(false);
   const [foldReserved, setFoldReserved] = useState(false);
   const [rebuyLoading, setRebuyLoading] = useState(false);
+  const [leaveReserved, setLeaveReserved] = useState(false);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -380,8 +381,14 @@ export default function RoomGameView({
   };
 
   const leaveRoom = async () => {
+    if (leaveReserved) return;
     try {
-      await postJson(`${apiBase}/api/rooms/${roomId}/leave`, {});
+      const res = await postJson(`${apiBase}/api/rooms/${roomId}/leave`, {});
+      if (res?.reserved) {
+        setLeaveReserved(true);
+        setError(null);
+        return;
+      }
     } catch (e: any) {
       setError(e?.message ?? String(e));
       return;
@@ -389,6 +396,13 @@ export default function RoomGameView({
     window.localStorage.removeItem("lastRoomId");
     onBack();
   };
+
+  useEffect(() => {
+    if (!leaveReserved) return;
+    if (heroSeatIndex >= 0) return;
+    window.localStorage.removeItem("lastRoomId");
+    onBack();
+  }, [leaveReserved, heroSeatIndex, onBack]);
 
   const maxSeats = room?.maxSeats ?? 4;
   const rebuyAmount = room?.config?.initialStackPoints ?? 10000;
@@ -495,14 +509,24 @@ export default function RoomGameView({
         <h1 className="text-2xl font-bold">Online Table</h1>
         <button
           onClick={leaveRoom}
-          className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-sm font-semibold"
+          disabled={leaveReserved}
+          className={`px-3 py-1.5 rounded text-sm font-semibold ${
+            leaveReserved
+              ? "bg-slate-600 text-slate-300 cursor-not-allowed"
+              : "bg-rose-600 hover:bg-rose-500"
+          }`}
         >
-          Leave
+          {leaveReserved ? "Leave (Reserved)" : "Leave"}
         </button>
       </div>
 
       {(error || wsError) && (
         <div className="w-full max-w-5xl text-sm text-rose-400">{error ?? wsError}</div>
+      )}
+      {leaveReserved && (
+        <div className="w-full max-w-5xl text-sm text-amber-300">
+          退出予約中です。退出可能になり次第、自動で退出します。
+        </div>
       )}
       {closedMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60">
@@ -556,9 +580,14 @@ export default function RoomGameView({
               </button>
               <button
                 onClick={leaveRoom}
-                className="px-4 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
+                disabled={leaveReserved}
+                className={`px-4 py-1.5 rounded text-sm font-semibold ${
+                  leaveReserved
+                    ? "bg-slate-600 text-slate-300 cursor-not-allowed"
+                    : "bg-slate-700 hover:bg-slate-600"
+                }`}
               >
-                Exit
+                {leaveReserved ? "Exit (Reserved)" : "Exit"}
               </button>
             </div>
           </div>
