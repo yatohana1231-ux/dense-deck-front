@@ -14,7 +14,7 @@ export type HandCategory =
 
 export const HAND_CATEGORY_LABEL: Record<HandCategory, string> = {
   "high-card": "High Card",
-  "one-pair": "A Pair",
+  "one-pair": "One Pair",
   "two-pair": "Two Pair",
   "three-of-a-kind": "Three Cards",
   "straight": "Straight",
