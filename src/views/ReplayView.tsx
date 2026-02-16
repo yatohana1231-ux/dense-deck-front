@@ -191,7 +191,7 @@ function ReplayView({ record, onBack }: Props) {
       if (resultTimerRef.current !== null) {
         window.clearTimeout(resultTimerRef.current);
       }
-      if (endedStreet === "showdown") {
+      if (endedStreet === "showdown" || endedStreet === "allin_runout") {
         resultTimerRef.current = window.setTimeout(() => {
           setShowResultPopup(true);
           resultTimerRef.current = null;
@@ -225,7 +225,8 @@ function ReplayView({ record, onBack }: Props) {
   const togglePlay = () => setPlaying((v) => !v);
 
   const getHandDescriptionMemo = (idx: number) => {
-    if (!showResultPopup || table.street !== "showdown") return undefined;
+    if (!showResultPopup || (table.street !== "showdown" && table.street !== "allin_runout"))
+      return undefined;
     const participant = participantBySeat.get(idx);
     if (!participant) return undefined;
     return showdown?.winners.includes(idx)
@@ -234,7 +235,7 @@ function ReplayView({ record, onBack }: Props) {
   };
 
   const isSeatActive = (idx: number) => {
-    if (table.street === "showdown") {
+    if (table.street === "showdown" || table.street === "allin_runout") {
       return showResultPopup ? !!showdown?.winners.includes(idx) : false;
     }
     return table.currentPlayer === idx;
@@ -279,7 +280,8 @@ function ReplayView({ record, onBack }: Props) {
           const participant = participantBySeat.get(seatIdx);
           const shouldReveal =
             isHero ||
-            (table.street === "showdown" && participant?.showedHoleCards === true);
+            ((table.street === "showdown" || table.street === "allin_runout") &&
+              participant?.showedHoleCards === true);
           const label = isHero
             ? heroName
               ? `You (${heroName})`

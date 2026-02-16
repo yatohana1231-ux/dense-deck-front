@@ -1,6 +1,6 @@
 import type { Card as CardType } from "../components/cards.js";
 
-export type Street = "preflop" | "flop" | "turn" | "river" | "showdown";
+export type Street = "preflop" | "flop" | "turn" | "river" | "showdown" | "allin_runout";
 export type ActionKind = "fold" | "check" | "call" | "bet" | "raise";
 
 export type Pot = {

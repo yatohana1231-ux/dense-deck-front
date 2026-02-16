@@ -50,7 +50,11 @@ export function getHandDescription(value?: HandValue | null): string {
 
 export function isShowdownStreet(table?: TableState | null): boolean {
   if (!table) return false;
-  return table.street === "showdown" || table.revealStreet === "showdown";
+  return (
+    table.street === "showdown" ||
+    table.street === "allin_runout" ||
+    table.revealStreet === "showdown"
+  );
 }
 
 export function computeShowdownInfo(table: TableState): {

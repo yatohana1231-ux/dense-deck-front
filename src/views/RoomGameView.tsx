@@ -87,8 +87,8 @@ export default function RoomGameView({
     return [...flop, ...turn, ...river]; // river or showdown
   }, [table, displayStreet]);
   const isShowdown = isShowdownStreet(table);
-  const isAutoRunout =
-    !!table && table.street === "showdown" && table.revealStreet === "river";
+  const isAutoRunout = !!table && table.street === "allin_runout";
+  const runoutDelayMs = game?.runoutDelayMs ?? PRESENTATION_DELAYS.boardMs;
 
   // Delay turn display by 1s after an action to let popup linger.
   useEffect(() => {
@@ -156,14 +156,14 @@ export default function RoomGameView({
     streetDelayRef.current = window.setTimeout(() => {
       setDisplayStreet(stepStreet);
       streetDelayRef.current = null;
-    }, PRESENTATION_DELAYS.boardMs);
+    }, isAutoRunout ? runoutDelayMs : PRESENTATION_DELAYS.boardMs);
     return () => {
       if (streetDelayRef.current !== null) {
         window.clearTimeout(streetDelayRef.current);
         streetDelayRef.current = null;
       }
     };
-  }, [table, displayStreet, streetOrder, isAutoRunout, showdownReveal]);
+  }, [table, displayStreet, streetOrder, isAutoRunout, showdownReveal, runoutDelayMs]);
 
   const lastAction = useMemo(() => {
     const log = table?.actionLog ?? [];
@@ -206,14 +206,14 @@ export default function RoomGameView({
     showdownRevealRef.current = window.setTimeout(() => {
       setShowdownReveal(true);
       showdownRevealRef.current = null;
-    }, PRESENTATION_DELAYS.showdownRevealMs);
+    }, isAutoRunout ? runoutDelayMs : PRESENTATION_DELAYS.showdownRevealMs);
     return () => {
       if (showdownRevealRef.current !== null) {
         window.clearTimeout(showdownRevealRef.current);
         showdownRevealRef.current = null;
       }
     };
-  }, [table, isShowdown, displayStreet, isAutoRunout]);
+  }, [table, isShowdown, displayStreet, isAutoRunout, runoutDelayMs]);
 
   useEffect(() => {
     if (!table || !isShowdown) return;
@@ -611,6 +611,7 @@ export default function RoomGameView({
             const shouldAutoMuck =
               !!seat?.autoMuckWhenLosing &&
               isShowdown &&
+              table?.street !== "allin_runout" &&
               !showdownWinners.includes(seatIdx);
             const showCards =
               seatIdx === heroSeatIndex ||
@@ -759,7 +760,8 @@ function positionLabel(playerIndex: number, btnIndex: number, playerCount: numbe
 function getActionContext(table: any, heroSeatIndex: number) {
   if (!table || heroSeatIndex < 0) return null;
   const p = table.game?.players?.[heroSeatIndex];
-  if (!p || p.folded || p.allIn || table.street === "showdown") return null;
+  if (!p || p.folded || p.allIn || table.street === "showdown" || table.street === "allin_runout")
+    return null;
   const currentBet = table.game?.currentBet ?? 0;
   const lastRaise = table.lastRaise ?? 1;
   const toCall = Math.max(0, currentBet - (p.bet ?? 0));
