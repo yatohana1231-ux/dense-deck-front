@@ -53,12 +53,6 @@ export default function RoomGameView({
   const lastHandIdRef = useRef<string | null>(null);
   const [displayStreet, setDisplayStreet] = useState<Street>("preflop");
   const streetDelayRef = useRef<number | null>(null);
-  const [showdownReveal, setShowdownReveal] = useState(false);
-  const [showdownResult, setShowdownResult] = useState(false);
-  const showdownRevealRef = useRef<number | null>(null);
-  const showdownResultRef = useRef<number | null>(null);
-  const showdownRevealHandRef = useRef<string | null>(null);
-  const showdownResultHandRef = useRef<string | null>(null);
   const nextHandTimerRef = useRef<number | null>(null);
   const nextHandForRef = useRef<string | null>(null);
   const payoutTimerRef = useRef<number | null>(null);
@@ -89,6 +83,9 @@ export default function RoomGameView({
   const isShowdown = isShowdownStreet(table);
   const isAutoRunout = !!table && table.street === "allin_runout";
   const runoutDelayMs = game?.runoutDelayMs ?? PRESENTATION_DELAYS.boardMs;
+  const showdownStage = game?.showdownStage ?? "none";
+  const showdownReveal = showdownStage === "reveal" || showdownStage === "result" || showdownStage === "settled";
+  const showdownResult = showdownStage === "result" || showdownStage === "settled";
 
   // Delay turn display by 1s after an action to let popup linger.
   useEffect(() => {
@@ -142,7 +139,6 @@ export default function RoomGameView({
     }
     const nextStreet = (table.revealStreet ?? table.street) as Street;
     if (nextStreet === displayStreet) return;
-    if (isAutoRunout && !showdownReveal) return;
     const currentIdx = streetOrder.indexOf(displayStreet);
     const nextIdx = streetOrder.indexOf(nextStreet);
     if (nextIdx <= currentIdx) {
@@ -163,7 +159,7 @@ export default function RoomGameView({
         streetDelayRef.current = null;
       }
     };
-  }, [table, displayStreet, streetOrder, isAutoRunout, showdownReveal, runoutDelayMs]);
+  }, [table, displayStreet, streetOrder, isAutoRunout, runoutDelayMs]);
 
   const lastAction = useMemo(() => {
     const log = table?.actionLog ?? [];
@@ -177,64 +173,6 @@ export default function RoomGameView({
     return computeShowdownInfo(table);
   }, [table, isShowdown, displayStreet]);
   const showdownWinners = showdownInfo.winners ?? [];
-
-  useEffect(() => {
-    if (!table || !isShowdown) {
-      setShowdownReveal(false);
-      setShowdownResult(false);
-      showdownRevealHandRef.current = null;
-      showdownResultHandRef.current = null;
-      if (showdownRevealRef.current !== null) {
-        window.clearTimeout(showdownRevealRef.current);
-        showdownRevealRef.current = null;
-      }
-      if (showdownResultRef.current !== null) {
-        window.clearTimeout(showdownResultRef.current);
-        showdownResultRef.current = null;
-      }
-      return;
-    }
-    const canReveal = isAutoRunout || displayStreet === "river";
-    if (!canReveal) return;
-    if (showdownRevealHandRef.current === table.handId) return;
-    showdownRevealHandRef.current = table.handId;
-    setShowdownReveal(false);
-    setShowdownResult(false);
-    if (showdownRevealRef.current !== null) {
-      window.clearTimeout(showdownRevealRef.current);
-    }
-    showdownRevealRef.current = window.setTimeout(() => {
-      setShowdownReveal(true);
-      showdownRevealRef.current = null;
-    }, isAutoRunout ? runoutDelayMs : PRESENTATION_DELAYS.showdownRevealMs);
-    return () => {
-      if (showdownRevealRef.current !== null) {
-        window.clearTimeout(showdownRevealRef.current);
-        showdownRevealRef.current = null;
-      }
-    };
-  }, [table, isShowdown, displayStreet, isAutoRunout, runoutDelayMs]);
-
-  useEffect(() => {
-    if (!table || !isShowdown) return;
-    if (!showdownReveal) return;
-    if (isAutoRunout && displayStreet !== "river") return;
-    if (showdownResultHandRef.current === table.handId) return;
-    showdownResultHandRef.current = table.handId;
-    if (showdownResultRef.current !== null) {
-      window.clearTimeout(showdownResultRef.current);
-    }
-    showdownResultRef.current = window.setTimeout(() => {
-      setShowdownResult(true);
-      showdownResultRef.current = null;
-    }, PRESENTATION_DELAYS.showdownResultMs);
-    return () => {
-      if (showdownResultRef.current !== null) {
-        window.clearTimeout(showdownResultRef.current);
-        showdownResultRef.current = null;
-      }
-    };
-  }, [table, isShowdown, displayStreet, isAutoRunout, showdownReveal]);
 
   useEffect(() => {
     if (!table || !game?.handEnded || !showdownResult) {
@@ -329,7 +267,7 @@ export default function RoomGameView({
     }
     if (neededPlayers > 0) return;
     if (nextHandForRef.current === table.handId) return;
-    if (isShowdown && !showdownResult) return;
+    if (isShowdown && game?.showdownStage !== "settled") return;
     nextHandForRef.current = table.handId;
     if (nextHandTimerRef.current !== null) {
       window.clearTimeout(nextHandTimerRef.current);
@@ -346,7 +284,7 @@ export default function RoomGameView({
         nextHandTimerRef.current = null;
       }
     };
-  }, [table, game?.handEnded, isShowdown, showdownResult, neededPlayers, apiBase, roomId]);
+  }, [table, game?.handEnded, game?.showdownStage, isShowdown, neededPlayers, apiBase, roomId]);
 
   useEffect(() => {
     if (!foldReserved) return;
