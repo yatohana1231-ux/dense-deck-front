@@ -1,34 +1,40 @@
 ﻿# 05 Hand History
 
 ## 保存タイミング
-- ハンド終了時にAPIがDBへ保存
-- `hand_records` / `hand_participants` に記録
+- ハンド精算完了後に保存
+- 保存先: `hand_records` / `hand_participants`
 
 ## 履歴取得
-- `GET /api/history?limit=10&page=1`
+- `GET /api/history?limit=&page=&excludePreflopFolds=`
 - 認証必須
-- 自分が参加したハンドのみ
+- 自分参加ハンドのみ
 - `limit` 最大100
-- `excludePreflopFolds=true` を指定すると、heroがpreflopでfoldしたハンドを除外
 
-## 履歴保存 (API)
+## 手動保存
 - `POST /api/history`
-- 認証必須
-- simulator等での手動保存向け
+- 認証必須（主に検証用途）
 
-## 主要フィールド (APIレスポンス)
-- handId, roomId, matchId, handNoInMatch
-- playedAt, handStartedAt
-- mode, maxPlayers, buttonSeat, sbSeat, bbSeat
-- stakes, initialStacks, finalStacks
-- boardCards, actions, result, roomSnapshot
-- participants[]: seat, userId, username, holeCards, showedHoleCards, foldedStreet, netResultBB など
+## 主なレスポンス項目
+- `handId, roomId, matchId, handNoInMatch`
+- `playedAt, handStartedAt`
+- `mode, maxPlayers, buttonSeat, sbSeat, bbSeat`
+- `stakes, initialStacks, finalStacks`
+- `boardCards, actions, result, roomSnapshot`
+- `participants[]`
+  - `seat, userId, username`
+  - `holeCards, showedHoleCards, foldedStreet`
+  - `netResultPoints, startingStackPoints, endingStackPoints, isWinner`
 
 ## showedHoleCards
-- ショーダウンでカードを公開したかのフラグ
-- autoMuckWhenLosing 有効時は、負け確定プレイヤーが `false` で保存される
+- 実際に公開されたかを記録
+- 通常showdownでは Muck設定に応じて `false` になり得る
+- `allin_runout` ではポット参加者は公開（`true`）
 
-## フロントのハンド変換
-- `boardCards` を flop/turn/riverに分解
-- `participants` から seat別のholeCards/usernameを再構成
-- `result` から winners/handValues を採用
+## result_json
+- `winners, handValues, pot, pots, autoWin, streetEnded` を保持
+- `streetEnded` は `showdown` または `allin_runout` を取り得る
+
+## フロント変換
+- `boardCards` から flop/turn/river を再構成
+- `participants` から seat別ハンド/表示名を再構成
+- `result` から winners/handValues を再構成

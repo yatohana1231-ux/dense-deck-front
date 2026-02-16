@@ -1,65 +1,59 @@
 ﻿# 02 Game Rules (実装準拠)
 
-## デッキとボード予約 (boardReserved)
-- 52枚の標準デッキを使用
+## デッキとボード予約
+- 52枚デッキを使用
 - `boardReserved` は10枚固定
-  - 0-2: Flop
-  - 3: Turn
-  - 4: River
-  - 5-9: Burn予備
-
-## スターティングハンドの配布
-- 事前に `boardReserved` を確定
-- 重み付きハンドクラス抽選
-  - 重み = weightDense.json の値
-  - classKeyのcombo数を掛けた実効重みで抽選
-- 既使用カードと重複する場合は再抽選
-- 最大128回リトライ、失敗時は例外または空結果
+- 0-2: flop, 3: turn, 4: river, 5-9: burn予備
 
 ## モード
-- `superDense` / `dense`
-- オンライン手札生成は `superDense` 固定
+- オンライン対戦は `superDense` 固定
 
-## ポジションとアクション順
-- 4max固定: BTN / BB / UTG / CO
-- Preflop: UTG -> CO -> BTN -> BB
-- Postflop: BB -> UTG -> CO -> BTN
-
-## ブラインド
-- BBのみ強制ベット (1BB)
-- SBは存在しない
+## ポジションとブラインド
+- 4max: BTN / BB / UTG / CO
+- 3人時: BTN / UTG / BB
+- 2人時: BTN / BB
+- SBなし、シングルブラインド制（BBのみ）
+- 1BB = 100 points
 
 ## アクション
-- 可能アクション: fold / check / call / bet / raise
-- `amount` は「ストリート内の合計ベット額」
-- bet最小値: 1BB
-- raise最小値: 直前のレイズ幅 (lastRaise)
-- 最小レイズ未満のオールインは raise成立せず、以後 raise不可
+- `fold / check / call / bet / raise`
+- `amount` はストリート内の合計ベット額（total）
+- 最小bet: 100 points
+- 最小raise: `max(currentBet + lastRaise, currentBet + 100)`
+- 最小raise未満のオールインは `raiseBlocked=true` で以降raise不可
 
 ## ストリート進行
-- 全員のベット額が揃い、最後のアグレッサが一巡すると次ストリート
-- アクション可能者が1人以下でベット額一致なら即ショーダウン
-- 1人だけ残った場合 `autoWin` で即決
+- `Street`: `preflop | flop | turn | river | showdown | allin_runout`
+- 1人残りは `autoWin` 決着
+- アクション可能者が1人以下かつベット一致で進行終了判定
+  - all-inあり かつ side potなし (`computePots(...).length===1`): `allin_runout`
+  - それ以外: `showdown`
 
-## オールイン処理
-- all-inはstackが0になった時点で判定
-- `raiseBlocked` により以後レイズ禁止
-- all-in発生時は通常と同じくショーダウンへ進行
+## オールイン自動進行 (`allin_runout`)
+- 対象: side potなしのオールイン決着
+- 残りボードを `revealStreet` で段階公開
+- 段階公開後、ショーダウン段階へ進行
 
-## タイマーと自動アクション
-- `actionSeconds` (デフォルト60秒)
-- `reconnectGraceSeconds` (デフォルト60秒)
-- タイムアウト時は check可能ならcheck、不可ならfold
-- フロントの残り時間表示はサーバの `actionDeadline` を基準に算出する
+## ショーダウン進行段階（API主導）
+- `showdownStage`: `none | reveal | result | settled`
+- 進行順序
+  1. reveal（ハンド公開）
+  2. result（勝敗表示）
+  3. settled（精算済み）
+- `settleHand` 実行時に `handEnded=true` と `showdownStage="settled"` を同時配信
 
-## ショーダウン
-- showdownで役を比較し勝者決定
-- side potを含む配分を計算
-- 配分後はstack更新、0以下は sit out
-- autoMuckWhenLosing 設定が有効な場合、勝敗確定後に負け確定プレイヤーの公開を抑止する
-  - 履歴保存時は `showedHoleCards=false` で記録
+## Muck
+- 通常showdown: `auto_muck_when_losing=true` の敗者は非公開可
+- `allin_runout`: Muck設定に関わらずポット参加者を公開
+- 履歴保存時は `showed_hole_cards` に反映
+
+## タイマー
+- アクション制限: `actionSeconds`（デフォルト60秒）
+- 切断猶予: `reconnectGraceSeconds`（デフォルト60秒）
+- アクション期限超過: check可能ならcheck、不可ならfold
+- フロント残り時間は `actionDeadline` 基準
 
 ## ハンド終了
-- ハンド終了時に履歴をDB保存
-- ルーム状態はWAITINGへ戻る
-- pendingLeaveはHAND_ENDで確定
+- 精算後に履歴保存
+- ルーム状態は `WAITING` へ遷移
+- `pendingLeaveUserIds` はハンド終了後に確定処理

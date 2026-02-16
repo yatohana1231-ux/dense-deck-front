@@ -1,8 +1,8 @@
-﻿# 06 API Reference
+﻿# 07 API Reference
 
 ## Health
-- GET `/api/health` -> `{ ok: true, service: "dense-deck-api" }`
-- GET `/health` -> 同上
+- GET `/api/health`
+- GET `/health`
 
 ## Auth
 - POST `/api/auth/guest`
@@ -18,12 +18,23 @@
 ## Rooms
 - GET `/api/rooms`
 - POST `/api/rooms`
+  - req: `{ name?, password?, tag?, config?: { initialStackPoints?, actionSeconds?, reconnectGraceSeconds?, rebuyPoints? } }`
+  - res: `{ room }`
 - POST `/api/rooms/:id/join`
+  - req: `{ password? }`
+  - res: `{ room }`
 - POST `/api/rooms/:id/leave`
+  - res: `{ ok: true, reserved: boolean }`
 - POST `/api/rooms/:id/start`
+  - res: `{ room }`
 - POST `/api/rooms/:id/action`
+  - req: `{ playerIndex, kind, amount? }`
+  - res: `{ state }`
 - POST `/api/rooms/:id/rebuy`
+  - req: `{ amount }`
+  - res: `{ room }`
 - POST `/api/rooms/:id/heartbeat`
+  - res: `{ ok: true }`
 
 ## Deal
 - POST `/api/deal`
@@ -40,35 +51,35 @@
 
 ## Gallery
 - GET `/api/gallery/tags`
-  - res: `{ authorFixedTags: [{ key, label }], viewerTags: [{ key, label }], focusPoints: [{ key, label }], lang }`
 - POST `/api/gallery/posts`
-  - req: `{ handId, title?, privateNote?, fixedTagKeys?, freeTags?, focusPoint? }`
-  - res: `{ postId }`
 - GET `/api/gallery/posts?tag=&page=&limit=`
-  - res: `{ items: [...] }` (各itemに`handReplay`を含む)
 - GET `/api/gallery/posts/by-hand/:handId`
-  - res: `{ postId }`
 - GET `/api/gallery/posts/:postId`
-  - res: `{ postId, title, authorTags, viewerTags, focusPoint, handReplay, createdAt, isOwner, status?, privateNote?, metrics? }`
 - PATCH `/api/gallery/posts/:postId`
-  - req: `{ title?, privateNote?, fixedTagKeys?, freeTags?, focusPoint? }`
 - POST `/api/gallery/posts/:postId/withdraw`
 - POST `/api/gallery/posts/:postId/like`
 - DELETE `/api/gallery/posts/:postId/like`
 - PUT `/api/gallery/posts/:postId/viewer-tags`
-  - req: `{ tagKeys: string[] }`
 - POST `/api/gallery/posts/:postId/view/start`
-  - req: `{ viewerAnonId? }`
-  - res: `{ viewSessionId }`
 - POST `/api/gallery/posts/:postId/view/end`
-  - req: `{ viewSessionId, dwellMs }`
 
 ## WebSocket
 - WS `/ws/rooms`
-  - res: `{ type: "rooms", rooms: [...] }`
+  - `{ type: "rooms", rooms: [...] }`
 - WS `/ws/rooms/:id`
-  - res: `{ type: "room", room: ... }`
-  - res: `{ type: "game", state: ... }` (stateは`actionDeadline`を含む)
-  - res: `{ type: "gameClear" }`
-  - res: `{ type: "roomClosed", message: ... }`
-  - res: `{ type: "error", message: ... }`
+  - `{ type: "room", room }`
+  - `{ type: "game", state }`
+  - `{ type: "gameClear" }`
+  - `{ type: "roomClosed", message }`
+  - `{ type: "error", message }`
+
+## game state（主要）
+- `table`
+  - `street`: `preflop|flop|turn|river|showdown|allin_runout`
+  - `revealStreet`
+  - `currentPlayer`, `actionLog`, `pots`, `autoWin`, `handId`
+- `actionDeadline`
+- `handEnded`
+- `handSettled`
+- `runoutDelayMs`
+- `showdownStage`: `none|reveal|result|settled`
