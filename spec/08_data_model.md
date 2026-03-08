@@ -5,13 +5,18 @@
 - `email` (unique, nullable)
 - `password_hash`
 - `username` (unique)
+- `status` (default: `ANONYMOUS`)
+- `role` (default: `USER`)
+- `last_connected_at` (default: now)
 - `username_changed`
 
 ## sessions
 - `session_id` (PK)
 - `user_id` (FK)
-- `is_guest`
 - `expires_at`
+
+補足:
+- guest判定は `sessions.is_guest` ではなく `users.status == ANONYMOUS` を利用する
 
 ## user_settings
 - `id` (PK)

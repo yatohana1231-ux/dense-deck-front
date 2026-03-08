@@ -8,9 +8,13 @@
 - POST `/api/auth/guest`
 - GET `/api/auth/me`
 - POST `/api/auth/register`
+  - req: `{ username?, email?, password }`
 - POST `/api/auth/login`
+  - req: `{ username, password }`
 - POST `/api/auth/logout`
 - POST `/api/user/username`
+- PUT `/api/user/account`
+  - req: `{ email }`
 - PUT `/api/user/password`
 - POST `/api/password/reset/request`
 - POST `/api/password/reset/confirm`
