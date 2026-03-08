@@ -289,6 +289,9 @@ function App() {
           username: auth.user.username,
           usernameChanged: auth.user.usernameChanged,
           email: auth.user.email,
+          status: auth.user.status,
+          role: auth.user.role,
+          lastConnectedAt: auth.user.lastConnectedAt,
         }}
         onBack={() => setView("top")}
         onLogout={() => auth.logout().then(() => setView("top"))}

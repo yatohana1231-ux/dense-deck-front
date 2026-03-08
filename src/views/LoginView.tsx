@@ -9,7 +9,7 @@ type Props = {
 };
 
 export default function LoginView({ apiBase, onSuccess, onBack, onGoRegister, onGoReset }: Props) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,12 +22,12 @@ export default function LoginView({ apiBase, onSuccess, onBack, onGoRegister, on
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
       if (!res.ok) throw new Error("Login failed");
       onSuccess();
     } catch (e: any) {
-      setError("Invalid email or password");
+      setError("Invalid username or password");
     } finally {
       setLoading(false);
     }
@@ -46,12 +46,11 @@ export default function LoginView({ apiBase, onSuccess, onBack, onGoRegister, on
       </div>
       <div className="w-full max-w-md bg-slate-800/70 rounded-lg p-4 border border-slate-700 space-y-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-slate-300">Email</label>
+          <label className="text-sm text-slate-300">Username</label>
           <input
             className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-1">

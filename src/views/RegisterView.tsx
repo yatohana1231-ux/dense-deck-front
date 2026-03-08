@@ -12,7 +12,6 @@ export default function RegisterView({ apiBase, onSuccess, onBack, onGoLogin }: 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [username, setUsername] = useState("");
-  const [later, setLater] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,11 +23,17 @@ export default function RegisterView({ apiBase, onSuccess, onBack, onGoLogin }: 
     setLoading(true);
     setError(null);
     try {
+      const normalizedUsername = username.trim();
+      const normalizedEmail = email.trim();
       const res = await fetch(`${apiBase}/api/auth/register`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, username: later ? undefined : username, later }),
+        body: JSON.stringify({
+          username: normalizedUsername.length > 0 ? normalizedUsername : undefined,
+          email: normalizedEmail.length > 0 ? normalizedEmail : undefined,
+          password,
+        }),
       });
       if (!res.ok) {
         if (res.status === 409) throw new Error("Email or username already registered");
@@ -57,24 +62,11 @@ export default function RegisterView({ apiBase, onSuccess, onBack, onGoLogin }: 
         <div className="flex flex-col gap-1">
           <label className="text-sm text-slate-300">Username</label>
           <input
-            className={`border rounded px-3 py-2 text-sm ${
-              later
-                ? "bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed"
-                : "bg-slate-900 border-slate-700 text-slate-100"
-            }`}
+            className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            disabled={later}
             placeholder="Player-XXXX (optional)"
           />
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <input
-              type="checkbox"
-              checked={later}
-              onChange={(e) => setLater(e.target.checked)}
-            />
-            <span>Set later (use default for now)</span>
-          </div>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm text-slate-300">Email</label>

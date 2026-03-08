@@ -6,6 +6,9 @@ export type AuthUser = {
   username: string;
   usernameChanged?: boolean;
   email?: string | null;
+  status: "ANONYMOUS" | "PROVISIONAL" | "PENDING" | "VERIFIED" | string;
+  role: "ADMIN" | "USER" | string;
+  lastConnectedAt: string;
 };
 
 export function useAuth() {
