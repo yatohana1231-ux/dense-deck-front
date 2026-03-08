@@ -49,3 +49,34 @@
 - `/ws/rooms/:id`: ルーム + ゲーム状態push
 - `IN_HAND` 中は着席者以外の接続を拒否
 - メッセージ: `rooms`, `room`, `game`, `gameClear`, `roomClosed`, `error`
+
+## 対戦相手スタッツ表示（フロント）
+- 対象画面: Online Table（RoomGame）
+- PCのみ実装（SPのタップUIは未実装）
+- 自席ホバー時は非表示、相手席ホバー時のみ表示
+- 席エリア（ユーザー名・カード周辺）ホバー中は、ツールチップをポインタ追従で表示
+- ツールチップは不透明背景で表示
+
+### 保存先（localStorage）
+- キー: `dense-deck-opponent-stats`
+- 値: `Record<userId, { hands, voluntarilyPut, showdown, fold }>`
+- ルーム入場時に同席ユーザーで同期:
+  - 未登録ユーザーは0初期化
+  - 退出ユーザーは削除
+- 退場時は `dense-deck-opponent-stats` を削除（持ち越しなし）
+- 同席者退出の反映は、各クライアントが `room.seats` 更新をトリガーに自端末データを同期削除
+
+### 集計タイミングと定義
+- 集計タイミング: `handEnded=true` のハンド終了時に1回だけ更新
+- `hands`: 着席状態で配られたハンド数
+- `voluntarilyPut`: そのハンド中に `call` / `bet` / `raise` が1回以上あれば +1（複数回でも1）
+  - BB強制オールイン相当（開始スタック `<=100` のBB）は +1
+- `showdown`: ハンド終了ストリートが `showdown` または `allin_runout` かつ、終了時に `fold=false` なら +1
+- `fold`: ポストフロップ以降（`street !== preflop`）で `fold` したら +1
+
+### 表示フォーマット
+- `Hands`: `hands`
+- `VPIP`: `voluntarilyPut / hands`
+- `Showdown`: `showdown / voluntarilyPut`
+- `Fold`: `fold / voluntarilyPut`
+- `0 / 0` はそのまま表示
