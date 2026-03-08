@@ -15,6 +15,54 @@ import {
 } from "../game/presentation/timeline.js";
 import { compareHandValues } from "../game/handEval.js";
 
+const OPPONENT_STATS_KEY = "dense-deck-opponent-stats";
+
+type OpponentStats = {
+  hands: number;
+  voluntarilyPut: number;
+  showdown: number;
+  fold: number;
+};
+
+type OpponentStatsMap = Record<string, OpponentStats>;
+
+function createEmptyStats(): OpponentStats {
+  return { hands: 0, voluntarilyPut: 0, showdown: 0, fold: 0 };
+}
+
+function readOpponentStats(): OpponentStatsMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(OPPONENT_STATS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: OpponentStatsMap = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      const v = value as Partial<OpponentStats>;
+      out[key] = {
+        hands: Number.isFinite(v.hands as number) ? Number(v.hands) : 0,
+        voluntarilyPut: Number.isFinite(v.voluntarilyPut as number) ? Number(v.voluntarilyPut) : 0,
+        showdown: Number.isFinite(v.showdown as number) ? Number(v.showdown) : 0,
+        fold: Number.isFinite(v.fold as number) ? Number(v.fold) : 0,
+      };
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeOpponentStats(value: OpponentStatsMap) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(OPPONENT_STATS_KEY, JSON.stringify(value));
+}
+
+function clearOpponentStats() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(OPPONENT_STATS_KEY);
+}
+
 type Props = {
   apiBase: string;
   roomId: string;
@@ -60,6 +108,14 @@ export default function RoomGameView({
   const [foldReserved, setFoldReserved] = useState(false);
   const [rebuyLoading, setRebuyLoading] = useState(false);
   const [leaveReserved, setLeaveReserved] = useState(false);
+  const [opponentStats, setOpponentStats] = useState<OpponentStatsMap>(() => readOpponentStats());
+  const processedHandIdRef = useRef<string | null>(null);
+  const [hoverCard, setHoverCard] = useState<{
+    x: number;
+    y: number;
+    userId: string;
+    username: string;
+  } | null>(null);
 
   const heroUserId = auth.user?.userId ?? "";
   const heroSeatIndex = room?.seats.findIndex((s) => s.userId === heroUserId) ?? -1;
@@ -287,6 +343,84 @@ export default function RoomGameView({
   }, [table, game?.handEnded, game?.showdownStage, isShowdown, neededPlayers, apiBase, roomId]);
 
   useEffect(() => {
+    return () => {
+      clearOpponentStats();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!room?.seats) return;
+    setOpponentStats((prev) => {
+      const next: OpponentStatsMap = {};
+      for (const seat of room.seats) {
+        if (!seat?.userId) continue;
+        next[seat.userId] = prev[seat.userId] ?? createEmptyStats();
+      }
+      writeOpponentStats(next);
+      return next;
+    });
+  }, [room?.id, room?.seats]);
+
+  useEffect(() => {
+    if (!table || !game?.handEnded || !room?.seats?.length) return;
+    if (processedHandIdRef.current === table.handId) return;
+    processedHandIdRef.current = table.handId;
+
+    setOpponentStats((prev) => {
+      const next: OpponentStatsMap = { ...prev };
+      const seatCount = table.game.players.length;
+      const bbSeat = seatCount > 0 ? (table.btnIndex + 1) % seatCount : -1;
+      const vpipPlayers = new Set(
+        table.actionLog
+          .filter(
+            (a: { kind: string; playerIndex: number }) =>
+              a.kind === "call" || a.kind === "bet" || a.kind === "raise"
+          )
+          .map((a: { playerIndex: number }) => a.playerIndex)
+      );
+      const showdownStreet = table.street === "showdown" || table.street === "allin_runout";
+
+      for (const seat of room.seats) {
+        const seatIdx = seat.seatIndex;
+        if (seatIdx < 0 || seatIdx >= seatCount || !seat.userId) continue;
+        const player = table.game.players[seatIdx];
+        if (!player) continue;
+        const current = next[seat.userId] ?? createEmptyStats();
+        current.hands += 1;
+
+        const startStack = table.initialStacks?.[seatIdx] ?? 0;
+        const forcedAllInAsBb = seatIdx === bbSeat && startStack > 0 && startStack <= 100;
+        if (vpipPlayers.has(seatIdx) || forcedAllInAsBb) {
+          current.voluntarilyPut += 1;
+        }
+
+        if (showdownStreet && !player.folded) {
+          current.showdown += 1;
+        }
+
+        const foldedPostflop = table.actionLog.some(
+          (a: { playerIndex: number; kind: string; street: string }) =>
+            a.playerIndex === seatIdx && a.kind === "fold" && a.street !== "preflop"
+        );
+        if (foldedPostflop) {
+          current.fold += 1;
+        }
+
+        next[seat.userId] = current;
+      }
+
+      writeOpponentStats(next);
+      return next;
+    });
+  }, [table, game?.handEnded, room?.seats]);
+
+  useEffect(() => {
+    if (!hoverCard || !room?.seats) return;
+    const exists = room.seats.some((s) => s.userId === hoverCard.userId);
+    if (!exists) setHoverCard(null);
+  }, [hoverCard, room?.seats]);
+
+  useEffect(() => {
     if (!foldReserved) return;
     if (!isMyTurn) return;
     if (loading) return;
@@ -332,6 +466,7 @@ export default function RoomGameView({
       return;
     }
     window.localStorage.removeItem("lastRoomId");
+    clearOpponentStats();
     onBack();
   };
 
@@ -339,6 +474,7 @@ export default function RoomGameView({
     if (!leaveReserved) return;
     if (heroSeatIndex >= 0) return;
     window.localStorage.removeItem("lastRoomId");
+    clearOpponentStats();
     onBack();
   }, [leaveReserved, heroSeatIndex, onBack]);
 
@@ -440,6 +576,19 @@ export default function RoomGameView({
     return payoutContext.potTotal;
   }, [table, game?.handEnded, isShowdown, payoutApplied, payoutContext.potTotal]);
 
+  const updateHoverCardFromEvent = (
+    seat: { userId: string; username: string } | undefined,
+    e: { clientX: number; clientY: number }
+  ) => {
+    if (!seat?.userId || seat.userId === heroUserId) return;
+    setHoverCard({
+      x: e.clientX,
+      y: e.clientY,
+      userId: seat.userId,
+      username: seat.username,
+    });
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 inciso flex flex-col items-center p-4 gap-4">
@@ -471,11 +620,41 @@ export default function RoomGameView({
           <div className="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-800 p-5 text-center">
             <div className="text-sm text-slate-100">{closedMessage}</div>
             <button
-              onClick={onRoomClosed}
+              onClick={() => {
+                clearOpponentStats();
+                onRoomClosed();
+              }}
               className="mt-4 px-4 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+      {hoverCard && hoverCard.userId !== heroUserId && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: hoverCard.x,
+            top: hoverCard.y,
+            transform: "translate(-50%, -120%)",
+          }}
+        >
+          <div className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 shadow-lg min-w-[180px]">
+            <div className="font-semibold mb-1">{hoverCard.username}</div>
+            <div>Hands: {opponentStats[hoverCard.userId]?.hands ?? 0}</div>
+            <div>
+              VPIP: {(opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0)} /{" "}
+              {(opponentStats[hoverCard.userId]?.hands ?? 0)}
+            </div>
+            <div>
+              Showdown: {(opponentStats[hoverCard.userId]?.showdown ?? 0)} /{" "}
+              {(opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0)}
+            </div>
+            <div>
+              Fold: {(opponentStats[hoverCard.userId]?.fold ?? 0)} /{" "}
+              {(opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0)}
+            </div>
           </div>
         </div>
       )}
@@ -583,7 +762,23 @@ export default function RoomGameView({
                 : "absolute bottom-4 left-1/2 -translate-x-1/2";
 
             return (
-              <div key={seatIdx} className={`${posClass} flex flex-col items-center gap-2`}>
+              <div
+                key={seatIdx}
+                className={`${posClass} flex flex-col items-center gap-2`}
+                onMouseEnter={(e) =>
+                  updateHoverCardFromEvent(
+                    seat ? { userId: seat.userId, username: seat.username } : undefined,
+                    e
+                  )
+                }
+                onMouseMove={(e) =>
+                  updateHoverCardFromEvent(
+                    seat ? { userId: seat.userId, username: seat.username } : undefined,
+                    e
+                  )
+                }
+                onMouseLeave={() => setHoverCard(null)}
+              >
                 <div
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${
                     isEmpty ? "bg-slate-700/40 text-slate-400" : "bg-slate-700 text-slate-100"
@@ -616,7 +811,7 @@ export default function RoomGameView({
 
           {/* Board: only show when table exists */}
           {table && (
-            <div className="absolute left-1/2 top-1/2 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex justify-center">
+            <div className="pointer-events-none absolute left-1/2 top-1/2 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex justify-center">
               <BoardArea cards={visibleBoard} pot={displayPot} pots={table?.pots} />
             </div>
           )}
