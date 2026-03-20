@@ -134,8 +134,14 @@ function ReplayView({ record, onBack }: Props) {
     if (!table) return [];
     if (table.street === "preflop") return [];
     if (table.street === "flop") return table.game.flop;
-    if (table.street === "turn") return [...table.game.flop, table.game.turn];
-    return [...table.game.flop, table.game.turn, table.game.river];
+    if (table.street === "turn") {
+      return [...table.game.flop, ...(table.game.turn ? [table.game.turn] : [])];
+    }
+    return [
+      ...table.game.flop,
+      ...(table.game.turn ? [table.game.turn] : []),
+      ...(table.game.river ? [table.game.river] : []),
+    ];
   }, [table]);
 
   const showdown = useMemo(() => {

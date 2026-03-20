@@ -14,7 +14,12 @@ import {
 import { pickAiAction, getLegalActions as getLegalActionsImpl } from "./ai.js";
 import type { Rng } from "./rng.js";
 import { defaultRng } from "./rng.js";
-import { dealHandsFacade } from "../deal/dealFacade.js"
+import {
+  type DealSource,
+  dealInitialHandsFacade,
+  revealStreetCardsFacade,
+} from "../deal/dealFacade.js";
+import type { Mode } from "../api/deal.js";
 
 export type {
   Street,
@@ -39,6 +44,16 @@ function nextStreet(street: Street): Street {
   if (street === "flop") return "turn";
   if (street === "turn") return "river";
   return "showdown";
+}
+
+function streetToDealValue(street: Street): 1 | 2 | 3 {
+  if (street === "flop") return 1;
+  if (street === "turn") return 2;
+  return 3;
+}
+
+function isRevealStreet(street: Street): street is "flop" | "turn" | "river" {
+  return street === "flop" || street === "turn" || street === "river";
 }
 
 function findNextActiveInOrder(
@@ -84,6 +99,99 @@ function computePots(players: PlayerState[], initialStacks: number[]) {
   return pots;
 }
 
+function getDealContext(state: TableState): {
+  source: DealSource;
+  mode: Mode;
+  playerOrder: number[];
+} {
+  return {
+    source: state.dealSource ?? "api",
+    mode: state.dealMode ?? "superDense",
+    playerOrder: state.dealPlayerOrder ?? getPreflopOrder(state.btnIndex, state.game.players.length),
+  };
+}
+
+function applyRevealedBoard(
+  state: TableState,
+  cards: { flop: PlayerState["hand"]; turn: PlayerState["hand"]; river: PlayerState["hand"] }
+): TableState {
+  const nextTurn = cards.turn[0] ?? null;
+  const nextRiver = cards.river[0] ?? null;
+  return {
+    ...state,
+    game: {
+      ...state.game,
+      flop: cards.flop,
+      turn: nextTurn,
+      river: nextRiver,
+    },
+    boardReserved: [...cards.flop, ...cards.turn, ...cards.river],
+  };
+}
+
+async function revealStreet(state: TableState, street: "flop" | "turn" | "river"): Promise<TableState> {
+  const { source, mode, playerOrder } = getDealContext(state);
+  const result = await revealStreetCardsFacade({
+    source,
+    handId: state.handId,
+    playerOrder,
+    mode,
+    street: streetToDealValue(street),
+    expectedFlop: state.game.flop,
+    expectedTurn: state.game.turn ? [state.game.turn] : [],
+  });
+  return applyRevealedBoard(state, result);
+}
+
+async function ensureBoardThroughStreet(
+  state: TableState,
+  targetStreet: "flop" | "turn" | "river"
+): Promise<TableState> {
+  let next = state;
+  if (next.game.flop.length === 0) {
+    next = await revealStreet(next, "flop");
+  }
+  if (targetStreet === "flop") return next;
+  if (!next.game.turn) {
+    next = await revealStreet(next, "turn");
+  }
+  if (targetStreet === "turn") return next;
+  if (!next.game.river) {
+    next = await revealStreet(next, "river");
+  }
+  return next;
+}
+
+async function moveToStreet(state: TableState, street: "flop" | "turn" | "river"): Promise<TableState> {
+  const resetPlayers = state.game.players.map((p) => ({ ...p, bet: 0 }));
+  const firstActive = findFirstActiveInOrder(
+    getPostflopOrder(state.btnIndex, resetPlayers.length),
+    resetPlayers
+  );
+  const advancedState: TableState = {
+    ...state,
+    game: { ...state.game, players: resetPlayers, currentBet: 0 },
+    street,
+    currentPlayer: firstActive,
+    roundStarter: firstActive,
+    lastAggressor: null,
+    lastRaise: 100,
+    raiseBlocked: false,
+    revealStreet: street,
+    autoWin: null,
+  };
+  return ensureBoardThroughStreet(advancedState, street);
+}
+
+async function moveToShowdownWithRunout(state: TableState): Promise<TableState> {
+  const revealed = await ensureBoardThroughStreet(state, "river");
+  return {
+    ...revealed,
+    street: "showdown",
+    revealStreet: "river",
+  };
+}
+
 export async function createInitialTable(
   playerCount: number,
   initialStack: number,
@@ -91,22 +199,20 @@ export async function createInitialTable(
   rng: Rng = defaultRng
 ): Promise<TableState> {
   const preflopOrder = getPreflopOrder(btnIndex, playerCount);
+  const dealSource: DealSource = "api";
+  const dealMode: Mode = "superDense";
 
-  const { handId, hands, boardReserved } = await dealHandsFacade({
-    source: "api",
+  const { handId, hands } = await dealInitialHandsFacade({
+    source: dealSource,
     playerOrder: preflopOrder,
-    mode: "superDense",
+    mode: dealMode,
     rng,
   });
-
-  const flop = boardReserved.slice(0, 3);
-  const turn = boardReserved[3];
-  const river = boardReserved[4];
 
   const players: PlayerState[] = hands.map((h, i) => {
     const { bb } = getPositions(btnIndex, playerCount);
     const isBB = i === bb;
-    const posted = isBB ? 100 : 0; // 1BB = 100 points
+    const posted = isBB ? 100 : 0;
     const stackAfterBlind = Math.max(initialStack - posted, 0);
     return {
       hand: h,
@@ -118,14 +224,14 @@ export async function createInitialTable(
   });
 
   const pot = players.reduce((acc, p) => acc + p.bet, 0);
-  const currentBet = 100; // BB posts 100 points
+  const currentBet = 100;
   const firstActor = findFirstActiveInOrder(preflopOrder, players);
 
   const game: GameState = {
     players,
-    flop,
-    turn,
-    river,
+    flop: [],
+    turn: null,
+    river: null,
     pot,
     currentBet,
   };
@@ -134,12 +240,12 @@ export async function createInitialTable(
 
   return {
     game,
-    boardReserved,
+    boardReserved: [],
     street: "preflop",
     currentPlayer: firstActor,
     roundStarter: firstActor,
     lastAggressor: null,
-    lastRaise: 100, // BB posted 100 points
+    lastRaise: 100,
     raiseBlocked: false,
     btnIndex,
     autoWin: null,
@@ -149,6 +255,9 @@ export async function createInitialTable(
     initialStacks,
     actionLog: [],
     pots,
+    dealSource,
+    dealMode,
+    dealPlayerOrder: preflopOrder,
   };
 }
 
@@ -264,13 +373,12 @@ export function applyAction(
   };
 }
 
-export function advanceAfterAction(state: TableState): TableState {
+export async function advanceAfterAction(state: TableState): Promise<TableState> {
   let { game, street, currentPlayer, roundStarter, lastAggressor } = state;
   const players = game.players;
   const preflopOrder = getPreflopOrder(state.btnIndex, players.length);
   const postflopOrder = getPostflopOrder(state.btnIndex, players.length);
   const actionOrder = street === "preflop" ? preflopOrder : postflopOrder;
-  const nextStreetOrder = street === "preflop" ? postflopOrder : postflopOrder;
 
   if (
     players[roundStarter]?.folded === true ||
@@ -311,11 +419,11 @@ export function advanceAfterAction(state: TableState): TableState {
     lastAggressor !== null && currentPlayer === lastAggressor;
 
   if (actionable.length <= 1 && everyoneMatchedOrAllIn) {
-    return { ...state, street: "showdown", revealStreet: "river" };
+    return moveToShowdownWithRunout(state);
   }
 
   if (actionable.length === 0 && everyoneMatchedOrAllIn) {
-    return { ...state, street: "showdown", revealStreet: "river" };
+    return moveToShowdownWithRunout(state);
   }
 
   if (game.currentBet === 0) {
@@ -323,25 +431,14 @@ export function advanceAfterAction(state: TableState): TableState {
       const ns = nextStreet(street);
       if (ns === "showdown") return { ...state, street: "showdown", revealStreet: street };
       if (actionable.length <= 1) {
-        return { ...state, street: "showdown", revealStreet: "river" };
+        return moveToShowdownWithRunout(state);
       }
-      const resetPlayers = players.map((p) => ({ ...p, bet: 0 }));
-      const firstActive = findFirstActiveInOrder(nextStreetOrder, resetPlayers);
-      return {
-        ...state,
-        game: { ...game, players: resetPlayers, currentBet: 0 },
-        street: ns,
-        currentPlayer: firstActive,
-        roundStarter: firstActive,
-        lastAggressor: null,
-        lastRaise: 100,
-        raiseBlocked: false,
-        revealStreet: ns,
-        autoWin: null,
-      };
-    } else {
-      return { ...state, currentPlayer: nextIndex, roundStarter: effectiveStarter };
+      if (!isRevealStreet(ns)) {
+        throw new Error(`advanceAfterAction: invalid next street ${ns}`);
+      }
+      return moveToStreet(state, ns);
     }
+    return { ...state, currentPlayer: nextIndex, roundStarter: effectiveStarter };
   }
 
   if (
@@ -352,22 +449,12 @@ export function advanceAfterAction(state: TableState): TableState {
     const ns = nextStreet(street);
     if (ns === "showdown") return { ...state, street: "showdown" };
     if (actionable.length <= 1) {
-      return { ...state, street: "showdown", revealStreet: "river" };
+      return moveToShowdownWithRunout(state);
     }
-    const resetPlayers = players.map((p) => ({ ...p, bet: 0 }));
-    const firstActive = findFirstActiveInOrder(nextStreetOrder, resetPlayers);
-    return {
-      ...state,
-      game: { ...game, players: resetPlayers, currentBet: 0 },
-      street: ns,
-      currentPlayer: firstActive,
-      roundStarter: firstActive,
-      lastAggressor: null,
-      lastRaise: 100,
-      raiseBlocked: false,
-      revealStreet: ns,
-      autoWin: null,
-    };
+    if (!isRevealStreet(ns)) {
+      throw new Error(`advanceAfterAction: invalid next street ${ns}`);
+    }
+    return moveToStreet(state, ns);
   }
 
   return { ...state, currentPlayer: nextIndex, roundStarter: effectiveStarter };
@@ -424,4 +511,3 @@ export function makeActionLabel(
       return "Raise";
   }
 }
-

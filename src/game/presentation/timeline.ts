@@ -68,7 +68,11 @@ export function computeShowdownInfo(table: TableState): {
     };
   }
 
-  const board = [...table.game.flop, table.game.turn, table.game.river];
+  const board = [
+    ...table.game.flop,
+    ...(table.game.turn ? [table.game.turn] : []),
+    ...(table.game.river ? [table.game.river] : []),
+  ];
   if (board.length < 5) {
     return {
       winners: [],

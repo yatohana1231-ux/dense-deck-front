@@ -11,9 +11,9 @@ function getVisibleBoard(table: TableState) {
     case "flop":
       return flop;
     case "turn":
-      return [...flop, turn];
+      return turn ? [...flop, turn] : [...flop];
     default:
-      return [...flop, turn, river];
+      return [...flop, ...(turn ? [turn] : []), ...(river ? [river] : [])];
   }
 }
 

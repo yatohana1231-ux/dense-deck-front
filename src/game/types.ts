@@ -19,8 +19,8 @@ export type PlayerState = {
 export type GameState = {
   players: PlayerState[];
   flop: CardType[];
-  turn: CardType;
-  river: CardType;
+  turn: CardType | null;
+  river: CardType | null;
   pot: number;
   currentBet: number;
 };
@@ -40,7 +40,7 @@ export type ActionLogEntry = {
 
 export type TableState = {
   game: GameState;
-  boardReserved: CardType[];
+  boardReserved?: CardType[];
   street: Street;
   currentPlayer: number;
   roundStarter: number;
@@ -55,6 +55,9 @@ export type TableState = {
   initialStacks: number[];
   actionLog: ActionLogEntry[];
   pots: Pot[];
+  dealSource?: "local" | "api";
+  dealMode?: "dense" | "superDense";
+  dealPlayerOrder?: number[];
 };
 
 export type PendingAction = {

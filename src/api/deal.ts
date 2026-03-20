@@ -1,42 +1,85 @@
 export type Mode = "dense" | "superDense";
 
+export type DealStreet = 0 | 1 | 2 | 3;
+
 export type DealRequest = {
+  handId: string;
+  seatCount: number;
   playerOrder: number[];
   mode: Mode;
+  street: DealStreet;
 };
 
-export type DealResponse = {
+export type DealPreflopResponse = {
   handId: string;
   mode: Mode;
   seatCount: number;
   playerOrder: number[];
-  hands: string[][]; // ["As","Kd"]
-  boardReserved?: string[]; // ["As","Kd", ...] length 10 expected
+  hands: string[][];
 };
 
-// APIは同一ドメイン配下で /api/* にルーティングされる前提
+export type DealBoardResponse = {
+  handId: string;
+  mode: Mode;
+  seatCount: number;
+  playerOrder: number[];
+  street: 1 | 2 | 3;
+  flopcard: string[];
+  turncard: string[];
+  rivercard: string[];
+};
+
+export type DealResponse = DealPreflopResponse | DealBoardResponse;
+
+type DealErrorPayload = {
+  code?: string;
+  message?: string;
+};
+
+export class DealApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export async function dealFromApi(req: DealRequest): Promise<DealResponse> {
   const res = await fetch("/api/deal", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      seatCount: req.playerOrder.length,
-      playerOrder: req.playerOrder,
-      mode: req.mode,
-      // サーバ側は boardReserved を string[] でも受けられるようにしてないので
-      // ここは一旦 "As" へ変換して送る（下の helper を使用）
-      //boardReserved: (req.boardReserved ?? []).map((c) => `${c.rank}${c.suit}`),
-    }),
+    body: JSON.stringify(req),
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`dealFromApi failed: ${res.status} ${res.statusText} ${text}`);
+    let payload: DealErrorPayload | null = null;
+    try {
+      payload = (await res.json()) as DealErrorPayload;
+    } catch {
+      payload = null;
+    }
+    const code = payload?.code ?? "HTTP_ERROR";
+    const message = payload?.message ?? `dealFromApi failed: ${res.status} ${res.statusText}`;
+    throw new DealApiError(res.status, code, message);
   }
 
   const data = (await res.json()) as Partial<DealResponse>;
-  if (!Array.isArray(data.hands)) {
-    throw new Error("dealFromApi failed: hands not returned from API");
+  if (req.street === 0) {
+    if (!Array.isArray((data as Partial<DealPreflopResponse>).hands)) {
+      throw new Error("dealFromApi failed: hands not returned from API");
+    }
+    return data as DealPreflopResponse;
   }
-  return data as DealResponse;
+
+  if (
+    !Array.isArray((data as Partial<DealBoardResponse>).flopcard) ||
+    !Array.isArray((data as Partial<DealBoardResponse>).turncard) ||
+    !Array.isArray((data as Partial<DealBoardResponse>).rivercard)
+  ) {
+    throw new Error("dealFromApi failed: board cards not returned from API");
+  }
+  return data as DealBoardResponse;
 }

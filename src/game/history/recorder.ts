@@ -20,8 +20,8 @@ export type HandRecord = {
   }>;
   board: {
     flop: CardType[];
-    turn: CardType;
-    river: CardType;
+    turn: CardType | null;
+    river: CardType | null;
   };
   boardReserved?: CardType[];
   seatCount?: number;
@@ -45,7 +45,18 @@ function getWinners(table: TableState): { winners: number[]; values: (HandValue 
   const values: (HandValue | null)[] = [];
   let best: HandValue | null = null;
   let winners: number[] = [];
-  const fullBoard = [...table.game.flop, table.game.turn, table.game.river];
+  const fullBoard = [
+    ...table.game.flop,
+    ...(table.game.turn ? [table.game.turn] : []),
+    ...(table.game.river ? [table.game.river] : []),
+  ];
+
+  if (fullBoard.length < 5) {
+    return {
+      winners: [],
+      values: Array(table.game.players.length).fill(null),
+    };
+  }
 
   table.game.players.forEach((p, idx) => {
     if (p.folded) {
