@@ -6,6 +6,7 @@ type Props = {
   model: HandCardViewModel;
   onClick?: () => void;
   actions?: ReactNode;
+  showPlayerName?: boolean;
 };
 
 function formatTimestamp(value?: string | number | null) {
@@ -32,27 +33,36 @@ function resultTone(resultLabel: HandCardViewModel["resultLabel"]) {
   return "text-rose-300";
 }
 
-export default function HandCard({ model, onClick, actions }: Props) {
+export default function HandCard({ model, onClick, actions, showPlayerName = true }: Props) {
   const createdAt = formatTimestamp(model.createdAt);
   const hasTitle = Boolean(model.title);
   const showAuthorTags = model.authorTags !== undefined;
   const showViewerTags = model.viewerTags !== undefined;
-  const headingText = hasTitle ? `${model.title} (Posted by ${model.playerName})` : model.playerName;
+  const headingText = hasTitle
+    ? showPlayerName
+      ? `${model.title} (Posted by ${model.playerName})`
+      : model.title
+    : showPlayerName
+      ? model.playerName
+      : null;
+  const hasHeading = Boolean(headingText);
 
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className={`text-sm font-semibold truncate ${hasTitle ? "text-emerald-300" : "text-slate-100"}`}>
-            {headingText}
+      <div className="space-y-2">
+        {hasHeading ? (
+          <div className="flex items-start justify-between gap-3">
+            <div className={`min-w-0 flex-1 text-sm font-semibold truncate ${hasTitle ? "text-emerald-300" : "text-slate-100"}`}>
+              {headingText}
+            </div>
+            {createdAt ? <div className="shrink-0 text-xs text-right text-slate-400">{createdAt}</div> : null}
           </div>
+        ) : null}
+        <div className={`flex items-start justify-between gap-3 text-xs text-slate-300 ${hasHeading ? "" : "pt-0"}`}>
+          <div className={`text-sm font-semibold ${resultTone(model.resultLabel)}`}>{model.resultLabel}</div>
+          <div className="mr-auto font-semibold text-slate-100">{formatChipDelta(model.chipDelta)}</div>
+          {!hasHeading && createdAt ? <div className="shrink-0 text-xs text-right text-slate-400">{createdAt}</div> : null}
         </div>
-        {createdAt ? <div className="shrink-0 text-xs text-slate-400">{createdAt}</div> : null}
-      </div>
-
-      <div className="mt-2 flex items-center gap-3 text-xs text-slate-300">
-        <div className={`text-sm font-semibold ${resultTone(model.resultLabel)}`}>{model.resultLabel}</div>
-        <div className="font-semibold text-slate-100">{formatChipDelta(model.chipDelta)}</div>
       </div>
       <div className="mt-2 flex items-start gap-3 text-xs text-slate-200">
         <div className="w-16 shrink-0 text-slate-400">{model.positionLabel}</div>

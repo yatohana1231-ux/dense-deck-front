@@ -132,6 +132,7 @@ function HistoryView({
                 <HandCard
                   key={h.handId}
                   model={createHistoryHandCardModel(h)}
+                  showPlayerName={false}
                   onClick={() => onSelectHand(h)}
                   actions={
                     isLoggedIn && onGallery ? (
