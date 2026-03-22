@@ -54,6 +54,7 @@ const mergePayload = (item: any, heroUserId?: string): HandRecord => {
         userId: p.userId ?? null,
         username: p.username ?? null,
         role: p.role ?? null,
+        statsSnapshot: p.statsSnapshot ?? null,
         showedHoleCards: p.showedHoleCards ?? null,
         foldedStreet: p.foldedStreet ?? null,
         netResultPoints: p.netResultPoints ?? null,

@@ -8,7 +8,7 @@ type Props = {
   actions?: ReactNode;
 };
 
-function formatTimestamp(value?: string | null) {
+function formatTimestamp(value?: string | number | null) {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
@@ -37,18 +37,20 @@ export default function HandCard({ model, onClick, actions }: Props) {
   const hasTitle = Boolean(model.title);
   const showAuthorTags = model.authorTags !== undefined;
   const showViewerTags = model.viewerTags !== undefined;
+  const headingText = hasTitle ? `${model.title} (Posted by ${model.playerName})` : model.playerName;
 
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold truncate text-slate-100">{model.playerName}</div>
-          {hasTitle ? <div className="text-sm text-emerald-300 truncate">{model.title}</div> : null}
+          <div className={`text-sm font-semibold truncate ${hasTitle ? "text-emerald-300" : "text-slate-100"}`}>
+            {headingText}
+          </div>
         </div>
         {createdAt ? <div className="shrink-0 text-xs text-slate-400">{createdAt}</div> : null}
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-300">
+      <div className="mt-2 flex items-center gap-3 text-xs text-slate-300">
         <div className={`text-sm font-semibold ${resultTone(model.resultLabel)}`}>{model.resultLabel}</div>
         <div className="font-semibold text-slate-100">{formatChipDelta(model.chipDelta)}</div>
       </div>
@@ -56,8 +58,7 @@ export default function HandCard({ model, onClick, actions }: Props) {
         <div className="w-16 shrink-0 text-slate-400">{model.positionLabel}</div>
         <div className="flex min-w-0 items-start gap-2">
           <div className="flex items-center gap-1">
-            <span className="shrink-0 text-slate-400">Hand</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 ml-1">
               {model.handCards.length === 0 ? (
                 <span className="text-slate-500">Hidden</span>
               ) : (
@@ -69,8 +70,7 @@ export default function HandCard({ model, onClick, actions }: Props) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="shrink-0 text-slate-400">Board</span>
+          <div className="flex items-center gap-1 ml-5">
             <div className="flex gap-1">
               {model.boardCards.map((card, idx) => (
                 <div key={`b-${idx}`} className="w-10">

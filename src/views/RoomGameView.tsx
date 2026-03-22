@@ -19,15 +19,30 @@ const OPPONENT_STATS_KEY = "dense-deck-opponent-stats";
 
 type OpponentStats = {
   hands: number;
+  actions: number;
   voluntarilyPut: number;
   showdown: number;
+  check: number;
+  bet: number;
+  raise: number;
+  call: number;
   fold: number;
 };
 
 type OpponentStatsMap = Record<string, OpponentStats>;
 
 function createEmptyStats(): OpponentStats {
-  return { hands: 0, voluntarilyPut: 0, showdown: 0, fold: 0 };
+  return {
+    hands: 0,
+    actions: 0,
+    voluntarilyPut: 0,
+    showdown: 0,
+    check: 0,
+    bet: 0,
+    raise: 0,
+    call: 0,
+    fold: 0,
+  };
 }
 
 function readOpponentStats(): OpponentStatsMap {
@@ -42,8 +57,13 @@ function readOpponentStats(): OpponentStatsMap {
       const v = value as Partial<OpponentStats>;
       out[key] = {
         hands: Number.isFinite(v.hands as number) ? Number(v.hands) : 0,
+        actions: Number.isFinite(v.actions as number) ? Number(v.actions) : 0,
         voluntarilyPut: Number.isFinite(v.voluntarilyPut as number) ? Number(v.voluntarilyPut) : 0,
         showdown: Number.isFinite(v.showdown as number) ? Number(v.showdown) : 0,
+        check: Number.isFinite(v.check as number) ? Number(v.check) : 0,
+        bet: Number.isFinite(v.bet as number) ? Number(v.bet) : 0,
+        raise: Number.isFinite(v.raise as number) ? Number(v.raise) : 0,
+        call: Number.isFinite(v.call as number) ? Number(v.call) : 0,
         fold: Number.isFinite(v.fold as number) ? Number(v.fold) : 0,
       };
     }
@@ -61,6 +81,11 @@ function writeOpponentStats(value: OpponentStatsMap) {
 function clearOpponentStats() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(OPPONENT_STATS_KEY);
+}
+
+function formatRatio(numerator: number, denominator: number) {
+  if (denominator <= 0) return `${numerator} / ${denominator}\uFF08-\uFF09`;
+  return `${numerator} / ${denominator}\uFF08${Math.round((numerator / denominator) * 100)}%\uFF09`;
 }
 
 type Props = {
@@ -266,7 +291,7 @@ export default function RoomGameView({
     room?.seats?.filter((s) => !s.isSittingOut && s.stack > 0).length ?? 0;
   const neededPlayers = Math.max(0, 2 - activeSeatCount);
 
-  // ストリートが進むたびにベット欄をミニマムにリセット
+  // Reset action amount to a reasonable default when the street changes.
   useEffect(() => {
     if (!table) return;
     const ac = getActionContext(table, heroSeatIndex);
@@ -370,6 +395,12 @@ export default function RoomGameView({
       const next: OpponentStatsMap = { ...prev };
       const seatCount = table.game.players.length;
       const bbSeat = seatCount > 0 ? (table.btnIndex + 1) % seatCount : -1;
+      const actionsByPlayer = new Map<number, number>();
+      const checkByPlayer = new Map<number, number>();
+      const betByPlayer = new Map<number, number>();
+      const raiseByPlayer = new Map<number, number>();
+      const callByPlayer = new Map<number, number>();
+      const foldByPlayer = new Map<number, number>();
       const vpipPlayers = new Set(
         table.actionLog
           .filter(
@@ -378,6 +409,20 @@ export default function RoomGameView({
           )
           .map((a: { playerIndex: number }) => a.playerIndex)
       );
+      table.actionLog.forEach((entry: { playerIndex: number; kind: string }) => {
+        actionsByPlayer.set(entry.playerIndex, (actionsByPlayer.get(entry.playerIndex) ?? 0) + 1);
+        if (entry.kind === "check") {
+          checkByPlayer.set(entry.playerIndex, (checkByPlayer.get(entry.playerIndex) ?? 0) + 1);
+        } else if (entry.kind === "bet") {
+          betByPlayer.set(entry.playerIndex, (betByPlayer.get(entry.playerIndex) ?? 0) + 1);
+        } else if (entry.kind === "raise") {
+          raiseByPlayer.set(entry.playerIndex, (raiseByPlayer.get(entry.playerIndex) ?? 0) + 1);
+        } else if (entry.kind === "call") {
+          callByPlayer.set(entry.playerIndex, (callByPlayer.get(entry.playerIndex) ?? 0) + 1);
+        } else if (entry.kind === "fold") {
+          foldByPlayer.set(entry.playerIndex, (foldByPlayer.get(entry.playerIndex) ?? 0) + 1);
+        }
+      });
       const showdownStreet = table.street === "showdown" || table.street === "allin_runout";
 
       for (const seat of room.seats) {
@@ -387,6 +432,7 @@ export default function RoomGameView({
         if (!player) continue;
         const current = next[seat.userId] ?? createEmptyStats();
         current.hands += 1;
+        current.actions += actionsByPlayer.get(seatIdx) ?? 0;
 
         const startStack = table.initialStacks?.[seatIdx] ?? 0;
         const forcedAllInAsBb = seatIdx === bbSeat && startStack > 0 && startStack <= 100;
@@ -398,13 +444,11 @@ export default function RoomGameView({
           current.showdown += 1;
         }
 
-        const foldedPostflop = table.actionLog.some(
-          (a: { playerIndex: number; kind: string; street: string }) =>
-            a.playerIndex === seatIdx && a.kind === "fold" && a.street !== "preflop"
-        );
-        if (foldedPostflop) {
-          current.fold += 1;
-        }
+        current.check += checkByPlayer.get(seatIdx) ?? 0;
+        current.bet += betByPlayer.get(seatIdx) ?? 0;
+        current.raise += raiseByPlayer.get(seatIdx) ?? 0;
+        current.call += callByPlayer.get(seatIdx) ?? 0;
+        current.fold += foldByPlayer.get(seatIdx) ?? 0;
 
         next[seat.userId] = current;
       }
@@ -580,7 +624,7 @@ export default function RoomGameView({
     seat: { userId: string; username: string } | undefined,
     e: { clientX: number; clientY: number }
   ) => {
-    if (!seat?.userId || seat.userId === heroUserId) return;
+    if (!seat?.userId) return;
     setHoverCard({
       x: e.clientX,
       y: e.clientY,
@@ -631,7 +675,7 @@ export default function RoomGameView({
           </div>
         </div>
       )}
-      {hoverCard && hoverCard.userId !== heroUserId && (
+      {hoverCard && (
         <div
           className="fixed z-50 pointer-events-none"
           style={{
@@ -644,16 +688,38 @@ export default function RoomGameView({
             <div className="font-semibold mb-1">{hoverCard.username}</div>
             <div>Hands: {opponentStats[hoverCard.userId]?.hands ?? 0}</div>
             <div>
-              VPIP: {(opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0)} /{" "}
-              {(opponentStats[hoverCard.userId]?.hands ?? 0)}
+              VPIP:{" "}
+              {formatRatio(
+                opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0,
+                opponentStats[hoverCard.userId]?.hands ?? 0
+              )}
             </div>
             <div>
-              Showdown: {(opponentStats[hoverCard.userId]?.showdown ?? 0)} /{" "}
-              {(opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0)}
+              AGG Acts:{" "}
+              {formatRatio(
+                (opponentStats[hoverCard.userId]?.bet ?? 0) + (opponentStats[hoverCard.userId]?.raise ?? 0),
+                (opponentStats[hoverCard.userId]?.check ?? 0) +
+                  (opponentStats[hoverCard.userId]?.call ?? 0) +
+                  (opponentStats[hoverCard.userId]?.bet ?? 0) +
+                  (opponentStats[hoverCard.userId]?.raise ?? 0)
+              )}
             </div>
             <div>
-              Fold: {(opponentStats[hoverCard.userId]?.fold ?? 0)} /{" "}
-              {(opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0)}
+              PAS Acts:{" "}
+              {formatRatio(
+                (opponentStats[hoverCard.userId]?.check ?? 0) + (opponentStats[hoverCard.userId]?.call ?? 0),
+                (opponentStats[hoverCard.userId]?.check ?? 0) +
+                  (opponentStats[hoverCard.userId]?.call ?? 0) +
+                  (opponentStats[hoverCard.userId]?.bet ?? 0) +
+                  (opponentStats[hoverCard.userId]?.raise ?? 0)
+              )}
+            </div>
+            <div>
+              Showdown:{" "}
+              {formatRatio(
+                opponentStats[hoverCard.userId]?.showdown ?? 0,
+                opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0
+              )}
             </div>
           </div>
         </div>
@@ -917,3 +983,4 @@ function getActionContext(table: any, heroSeatIndex: number) {
 
   return { toCall, minBetTotal, minRaiseTotal, maxTotal, legal };
 }
+

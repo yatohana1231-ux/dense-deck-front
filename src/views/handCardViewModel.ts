@@ -5,7 +5,7 @@ import type { HandRecord } from "../game/history/recorder.js";
 export type HandCardViewModel = {
   playerName: string;
   title?: string | null;
-  createdAt?: string | null;
+  createdAt?: string | number | null;
   resultLabel: "Win" | "Lose" | "Chop";
   chipDelta: number | null;
   positionLabel: string;
@@ -74,6 +74,7 @@ export function createHistoryHandCardModel(record: HandRecord): HandCardViewMode
 
   return {
     playerName: participant?.username ?? getFallbackName(seat),
+    createdAt: record.endedAt ?? null,
     resultLabel: getResultLabel(record, seat),
     chipDelta: getChipDelta(record, seat),
     positionLabel: normalizePosition(participant?.role),

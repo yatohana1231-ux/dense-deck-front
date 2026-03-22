@@ -16,6 +16,20 @@ export type HandRecord = {
     userId?: string | null;
     username?: string | null;
     role?: string | null;
+    statsSnapshot?: Record<
+      string,
+      {
+        hands: number;
+        actions: number;
+        voluntarilyPut: number;
+        showdown: number;
+        check: number;
+        bet: number;
+        raise: number;
+        call: number;
+        fold: number;
+      }
+    > | null;
     showedHoleCards?: boolean | null;
     foldedStreet?: string | null;
     netResultPoints?: number | null;
