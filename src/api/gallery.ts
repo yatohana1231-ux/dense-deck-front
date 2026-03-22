@@ -1,6 +1,8 @@
 export type GalleryListItem = {
   postId: string;
   handId: string;
+  authorUserId: string;
+  authorUsername: string | null;
   title: string;
   authorTags: { fixed: string[]; free: string[] };
   viewerTags: { public: string[] };

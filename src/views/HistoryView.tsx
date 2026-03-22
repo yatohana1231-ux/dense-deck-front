@@ -4,6 +4,7 @@ import type { GalleryListItem } from "../api/gallery.js";
 import { getGalleryTags, listGalleryPosts } from "../api/gallery.js";
 import HandCard from "./HandCard.js";
 import { mapReplayToRecord } from "./handReplayToRecord.js";
+import { createGalleryHandCardModel, createHistoryHandCardModel } from "./handCardViewModel.js";
 
 type Props = {
   apiBase: string;
@@ -130,7 +131,7 @@ function HistoryView({
               history.map((h) => (
                 <HandCard
                   key={h.handId}
-                  record={h}
+                  model={createHistoryHandCardModel(h)}
                   onClick={() => onSelectHand(h)}
                   actions={
                     isLoggedIn && onGallery ? (
@@ -190,18 +191,8 @@ function HistoryView({
                   return (
                     <HandCard
                       key={p.postId}
-                      record={record}
+                      model={createGalleryHandCardModel(p, record)}
                       onClick={() => onOpenGallery?.(p.postId)}
-                      footer={
-                        <>
-                          <div className="text-xs text-slate-300">
-                            Tags: {p.authorTags.fixed.join(", ") || "-"}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            Free: {p.authorTags.free.join(", ") || "-"}
-                          </div>
-                        </>
-                      }
                     />
                   );
                 })()

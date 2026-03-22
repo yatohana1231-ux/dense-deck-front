@@ -3,6 +3,7 @@ import type { GalleryListItem } from "../api/gallery.js";
 import { getGalleryTags, listGalleryPosts } from "../api/gallery.js";
 import HandCard from "./HandCard.js";
 import { mapReplayToRecord } from "./handReplayToRecord.js";
+import { createGalleryHandCardModel } from "./handCardViewModel.js";
 
 type Props = {
   apiBase: string;
@@ -95,13 +96,8 @@ export default function GalleryListView({ apiBase, onOpen, onCreate, onBack, isL
             return (
               <HandCard
                 key={p.postId}
-                record={record}
+                model={createGalleryHandCardModel(p, record)}
                 onClick={() => onOpen(p.postId)}
-                footer={
-                  <div className="text-xs text-slate-400">
-                    Tags: {p.authorTags.fixed.join(", ") || "-"} / Focus: {p.focusPoint ?? "-"}
-                  </div>
-                }
               />
             );
           })()

@@ -1,72 +1,102 @@
 import type { ReactNode } from "react";
-import type { HandRecord } from "../game/history/recorder.js";
 import Card from "../components/Card.js";
+import type { HandCardViewModel } from "./handCardViewModel.js";
 
 type Props = {
-  record: HandRecord;
+  model: HandCardViewModel;
   onClick?: () => void;
-  footer?: ReactNode;
   actions?: ReactNode;
 };
 
-export default function HandCard({ record, onClick, footer, actions }: Props) {
-  const board = record.board ?? { flop: [], turn: undefined, river: undefined };
-  const boardCards = [...(board.flop ?? []), board.turn, board.river].filter(Boolean);
-  const revealedCount =
-    record.streetEnded === "preflop"
-      ? 0
-      : record.streetEnded === "flop"
-        ? 3
-        : record.streetEnded === "turn"
-          ? 4
-          : 5;
-  const hero = record.holeCards?.[record.heroIndex ?? 2] ?? [];
-  const boardSlots = Array.from({ length: 5 }).map((_, idx) =>
-    idx < revealedCount ? boardCards[idx] ?? null : null
-  );
-  const isWin = record.winners?.includes(record.heroIndex ?? 2);
-  const resultLabel = isWin ? "Win" : "Lose";
+function formatTimestamp(value?: string | null) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatChipDelta(value: number | null) {
+  if (value === null) return "-";
+  return `${value > 0 ? "+" : ""}${value} points`;
+}
+
+function resultTone(resultLabel: HandCardViewModel["resultLabel"]) {
+  if (resultLabel === "Win") return "text-emerald-300";
+  if (resultLabel === "Chop") return "text-amber-300";
+  return "text-rose-300";
+}
+
+export default function HandCard({ model, onClick, actions }: Props) {
+  const createdAt = formatTimestamp(model.createdAt);
+  const hasTitle = Boolean(model.title);
+  const showAuthorTags = model.authorTags !== undefined;
+  const showViewerTags = model.viewerTags !== undefined;
 
   const body = (
     <>
-      <div className="text-sm font-semibold truncate">
-        Hand: <span className="text-emerald-300">{record.handId}</span>
-      </div>
-      <div className="text-xs text-slate-300">
-        BTN: {record.btnIndex} / Pot: {record.pot ?? 0} points / Winners:{" "}
-        {record.winners?.length ? record.winners.map((w) => `P${w + 1}`).join(", ") : "-"}
-      </div>
-      <div className="mt-2 flex flex-col gap-2 text-xs text-slate-200">
-        <div className={`text-sm font-semibold ${isWin ? "text-emerald-300" : "text-rose-300"}`}>
-          {resultLabel}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold truncate text-slate-100">{model.playerName}</div>
+          {hasTitle ? <div className="text-sm text-emerald-300 truncate">{model.title}</div> : null}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            {hero.length === 0 ? (
-              <span className="text-slate-400">Hero cards hidden</span>
-            ) : (
-              hero.map((c, idx) => (
-                <div key={`h-${idx}`} className="w-10">
-                  <Card card={c} />
+        {createdAt ? <div className="shrink-0 text-xs text-slate-400">{createdAt}</div> : null}
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-300">
+        <div className={`text-sm font-semibold ${resultTone(model.resultLabel)}`}>{model.resultLabel}</div>
+        <div className="font-semibold text-slate-100">{formatChipDelta(model.chipDelta)}</div>
+      </div>
+      <div className="mt-2 flex items-start gap-3 text-xs text-slate-200">
+        <div className="w-16 shrink-0 text-slate-400">{model.positionLabel}</div>
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="flex items-center gap-1">
+            <span className="shrink-0 text-slate-400">Hand</span>
+            <div className="flex gap-1">
+              {model.handCards.length === 0 ? (
+                <span className="text-slate-500">Hidden</span>
+              ) : (
+                model.handCards.map((card, idx) => (
+                  <div key={`h-${idx}`} className="w-10">
+                    <Card card={card} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="shrink-0 text-slate-400">Board</span>
+            <div className="flex gap-1">
+              {model.boardCards.map((card, idx) => (
+                <div key={`b-${idx}`} className="w-10">
+                  {card ? (
+                    <Card card={card} />
+                  ) : (
+                    <div className="h-14 w-10 rounded-lg border border-slate-700 bg-slate-800/60" />
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-          <div className="text-slate-400">|</div>
-          <div className="flex gap-1">
-            {boardSlots.map((c, idx) => (
-              <div key={`b-${idx}`} className="w-10">
-                {c ? (
-                  <Card card={c} />
-                ) : (
-                  <div className="w-10 h-14 rounded-lg border border-slate-700 bg-slate-800/60" />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      {footer ? <div className="mt-2">{footer}</div> : null}
+
+      {showAuthorTags ? (
+        <div className="mt-2 text-xs text-slate-300">
+          Author Tags: {model.authorTags && model.authorTags.length > 0 ? model.authorTags.join(", ") : "-"}
+        </div>
+      ) : null}
+
+      {showViewerTags ? (
+        <div className="mt-1 text-xs text-slate-400">
+          Viewer Tags: {model.viewerTags && model.viewerTags.length > 0 ? model.viewerTags.join(", ") : "-"}
+        </div>
+      ) : null}
     </>
   );
 
