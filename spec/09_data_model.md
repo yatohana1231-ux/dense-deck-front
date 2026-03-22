@@ -1,4 +1,4 @@
-﻿# 08 Data Model (Prisma)
+# 09 Data Model (Prisma)
 
 ## users
 - `user_id` (PK)
@@ -10,20 +10,20 @@
 - `last_connected_at` (default: now)
 - `username_changed`
 
+補足:
+- guest 判定は `sessions.is_guest` ではなく `users.status == ANONYMOUS` を利用する
+
 ## sessions
 - `session_id` (PK)
 - `user_id` (FK)
 - `expires_at`
-
-補足:
-- guest判定は `sessions.is_guest` ではなく `users.status == ANONYMOUS` を利用する
 
 ## user_settings
 - `id` (PK)
 - `user_id` (FK, UNIQUE)
 - `auto_muck_when_losing` (default: true)
 - `history_exclude_preflop_folds` (default: false)
-- `stack_display` (default: "blinds")
+- `stack_display` (default: `"blinds"`)
 
 ## hand_records
 - `hand_id` (PK)
@@ -38,7 +38,11 @@
 - `hand_participant_id` (PK)
 - `hand_id` (FK)
 - `user_id` (FK, nullable)
-- `seat`, `role`
+- `seat`
+- `role`
+  - ポジションを保持する
+  - 主な値: `BTN`, `BB`, `UTG`, `CO`
+  - 既存データや補完不能データは `UNKNOWN`
 - `joined_at_hand_start`, `left_before_hand_end`
 - `hole_cards_json`, `showed_hole_cards`, `folded_street`
 - `net_result_points`, `starting_stack_points`, `ending_stack_points`, `is_winner`
@@ -62,6 +66,9 @@
 - `title`, `private_note`, `status`, `focus_point`
 - `created_at`, `updated_at`
 - `views_total`, `views_unique`, `dwell_ms_total`, `dwell_ms_avg`
+
+補足:
+- Gallery 一覧表示では `author_user_id` から `users.username` を解決し、`authorUsername` として返却する
 
 ## hand_archive_post_fixed_tags
 - `post_id` (FK)

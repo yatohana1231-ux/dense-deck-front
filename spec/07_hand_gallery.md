@@ -1,8 +1,8 @@
-﻿# 06 Hand Gallery
+# 07 Hand Gallery
 
 ## 目的
 - Hand History から公開価値のあるハンドを投稿・共有する
-- 投稿ハンドに対してタグ付け・いいね・閲覧計測を行う
+- 投稿ハンドに対してタグ付け、いいね、閲覧計測を行う
 
 ## 画面導線
 - Hand History 上部タブ
@@ -11,38 +11,51 @@
   - `Museum`（将来拡張、現時点は無効）
 
 ## 一覧表示（Gallery）
-- History と同系統のカード表示
-- ハンド/ボード/勝敗を表示
-- 投稿タグ（固定タグ/フリータグ/Focus）を表示
+- History と同系統のカード表示を使用する
+- 各カードでは主に以下を表示する
+  - 投稿者名
+  - タイトル
+  - 投稿日時
+  - 結果サマリ `Win / Lose / Chop`
+  - 増減ポイント
+  - 投稿者ポジション
+  - Hand
+  - BoardCards
+  - 投稿者タグ
+  - 閲覧者タグ
 
-## 詳細表示（Gallery Detail）
-- 投稿ハンドのリプレイを表示
-- 投稿者のみ編集・withdraw可能
-- いいね、Viewerタグ付け可能
+## Gallery カードの基準プレイヤー
+- Gallery 一覧では投稿者を基準プレイヤーとして扱う
+- `hand_archive_posts.author_user_id` と `users.username` から投稿者情報を特定する
+- hand replay 内の `participants` から投稿者の `role`、`netResultPoints`、`holeCards` を参照する
 
-## ハンド公開ルール
-- 投稿者ハンドは表示
+## 投稿ハンド公開ルール
+- 投稿者ハンドは表示する
 - 対戦相手ハンドは実戦時の公開結果に従う
   - `showedHoleCards=false` は非表示
-- `allin_runout` 由来の手は、保存された公開結果に従って表示
+- `allin_runout` 由来のハンドは、保存された公開結果に従って表示する
 
-## タグ仕様
-### Author Fixed Tags
-- 複数選択可（上限5）
-- 主なキー例
-  - `range-spot`, `theory-check`, `exploit-spot`, `balance-spot`, `close-spot`
-  - `counterintuitive`, `thin-value`, `bluff-catcher`, `discussion-worthy`, `interesting-spot`, `educational`
+## 投稿日時
+- 一覧カードで表示する日時は `createdAt` を使う
+- `playedAt` は一覧カードの主表示には使わない
 
-### Author Free Tags
-- 0-2件
-- 正規化キー `tag_norm` で保存
+## 結果・ポイント表示
+- 結果は `Win / Lose / Chop` のいずれかを表示する
+- ポイントは符号付きで表示する
+  - 例: `+100 points`, `-100 points`
+- 単位表記は `points`
 
-### Viewer Tags
-- 閲覧者が付与
-- 複数指定を保持（投稿×ユーザー×タグで一意）
+## ポジション表示
+- 一覧カードのポジション表示は `participants.role` を利用する
+- 表示値は `BTN / BB / UTG / CO / UNKNOWN`
 
-### Focus Point
-- `Preflop | Flop | Turn | River`
+## タグ表示
+- 投稿者タグは `authorTags.fixed` と `authorTags.free` を併せて表示する
+- 閲覧者タグは `viewerTags.public` を表示する
+- タグ未設定時は `-` を表示する
+
+## タイトル未設定時
+- タイトル未設定時はタイトル欄を表示しない
 
 ## API
 - `GET /api/gallery/tags`
@@ -57,6 +70,19 @@
 - `PUT /api/gallery/posts/:postId/viewer-tags`
 - `POST /api/gallery/posts/:postId/view/start`
 - `POST /api/gallery/posts/:postId/view/end`
+
+## Gallery 一覧 API の主な返却項目
+- `postId`
+- `handId`
+- `authorUserId`
+- `authorUsername`
+- `title`
+- `authorTags.fixed`
+- `authorTags.free`
+- `viewerTags.public`
+- `focusPoint`
+- `createdAt`
+- `handReplay`
 
 ## データモデル
 - `hand_archive_posts`
