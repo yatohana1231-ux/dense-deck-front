@@ -59,7 +59,7 @@
 
 ### 保存先（localStorage）
 - キー: `dense-deck-opponent-stats`
-- 値: `Record<userId, { hands, voluntarilyPut, showdown, fold }>`
+- 値: `Record<userId, { hands, actions, voluntarilyPut, showdown, check, bet, raise, call, fold }>`
 - ルーム入場時に同席ユーザーで同期:
   - 未登録ユーザーは0初期化
   - 退出ユーザーは削除
@@ -69,14 +69,21 @@
 ### 集計タイミングと定義
 - 集計タイミング: `handEnded=true` のハンド終了時に1回だけ更新
 - `hands`: 着席状態で配られたハンド数
+- `actions`: そのハンド中に実行した action 数
 - `voluntarilyPut`: そのハンド中に `call` / `bet` / `raise` が1回以上あれば +1（複数回でも1）
   - BB強制オールイン相当（開始スタック `<=100` のBB）は +1
 - `showdown`: ハンド終了ストリートが `showdown` または `allin_runout` かつ、終了時に `fold=false` なら +1
-- `fold`: ポストフロップ以降（`street !== preflop`）で `fold` したら +1
+- `check`: そのハンド中に `check` を選択した回数
+- `bet`: そのハンド中に `bet` を選択した回数
+- `raise`: そのハンド中に `raise` を選択した回数
+- `call`: そのハンド中に `call` を選択した回数
+- `fold`: そのハンド中に `fold` を選択した回数
 
 ### 表示フォーマット
 - `Hands`: `hands`
 - `VPIP`: `voluntarilyPut / hands`
-- `Showdown`: `showdown / voluntarilyPut`
-- `Fold`: `fold / voluntarilyPut`
-- `0 / 0` はそのまま表示
+- `AGG Acts`: `(bet + raise) / (check + call + bet + raise)`
+- `PAS Acts`: `(check + call) / (check + call + bet + raise)`
+- 表示FMT: `分子 / 分母（●%）`
+- `%` は小数点第一位を四捨五入した整数表示
+- 分母 `0` は `0 / 0（-）`

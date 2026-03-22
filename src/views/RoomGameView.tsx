@@ -714,13 +714,6 @@ export default function RoomGameView({
                   (opponentStats[hoverCard.userId]?.raise ?? 0)
               )}
             </div>
-            <div>
-              Showdown:{" "}
-              {formatRatio(
-                opponentStats[hoverCard.userId]?.showdown ?? 0,
-                opponentStats[hoverCard.userId]?.voluntarilyPut ?? 0
-              )}
-            </div>
           </div>
         </div>
       )}

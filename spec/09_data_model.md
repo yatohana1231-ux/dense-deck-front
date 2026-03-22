@@ -44,8 +44,15 @@
   - 主な値: `BTN`, `BB`, `UTG`, `CO`
   - 既存データや補完不能データは `UNKNOWN`
 - `joined_at_hand_start`, `left_before_hand_end`
-- `hole_cards_json`, `showed_hole_cards`, `folded_street`
+- `hole_cards_json`, `stats_snapshot_json`, `showed_hole_cards`, `folded_street`
 - `net_result_points`, `starting_stack_points`, `ending_stack_points`, `is_winner`
+
+### `stats_snapshot_json`
+- participant 視点の HUD snapshot を保存する JSON
+- 形式:
+  - `Record<observedUserId, { hands, actions, voluntarilyPut, showdown, check, bet, raise, call, fold }>`
+- 保存タイミングは hand 開始時点
+- participant 自身の `user_id` も map に含める
 
 ## match_sessions
 - `match_id` (PK)
